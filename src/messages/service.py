@@ -5,6 +5,7 @@ from src.chats.service import ChatService
 from src.messages.repository import MessageRepository
 from src.messages.schemas import MessageRead, MessageCreate
 from src.replys.service import ReplyService
+from src.utils.socket_manager import sio
 from src.utils.unitofwork import IUnitOfWork
 
 
@@ -36,7 +37,7 @@ class MessageService:
             message_model = self.message_dict_to_read_model(message_dict)
             await self.__get_reply(uow, message_model)
             return message_model
-        
+
     async def __get_reply(self, uow: IUnitOfWork, message: MessageRead):
         reply_list = await self.reply_service.get_replys(uow, message.uuid)
         replys: dict[str: list[uuid.UUID]] = {}
@@ -60,12 +61,15 @@ class MessageService:
 
             await self.message_repository.add(uow.session, message_dict)
             await uow.commit()
+            sio.emit('new_messages', [message_dict])
+
             return message_dict['uuid']
 
     async def mark_message_deleted(self, uow: IUnitOfWork, message_uuid: uuid.UUID):
         async with uow:
             await self.message_repository.edit(uow.session, message_uuid, {'deleted_at': datetime.now(tz=None)})
             await uow.commit()
+            sio.emit('delete_messages', [message_uuid])
             return message_uuid
 
     @staticmethod
