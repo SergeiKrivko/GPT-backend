@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod, ABCMeta
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import insert, select, update, delete, and_
@@ -37,7 +38,7 @@ class SQLAlchemyRepository(AbstractRepository, metaclass=ABCMeta):
     def model(self):
         """Model class for SQLAlchemy."""
 
-    async def get(self, session, filter_dict: dict = None, **filter_by):
+    async def get(self, session: AsyncSession, filter_dict: dict = None, **filter_by):
         stmt = select(self.model).filter_by(**filter_by).limit(1)
         res = await session.execute(stmt)
         res = res.all()
@@ -45,15 +46,8 @@ class SQLAlchemyRepository(AbstractRepository, metaclass=ABCMeta):
             return res[0][0].dict()
         return None
 
-    async def get_all(self, session, filter_dict: dict = None, **filter_by):
+    async def get_all(self, session: AsyncSession, **filter_by):
         stmt = select(self.model).filter_by(**filter_by)
-
-        if filter_dict:
-            for key, val in filter_dict.items():
-                if key in self.model.__dict__:
-                    if val[0] == 'between':
-                        stmt = stmt.filter(and_(self.model.__dict__[key] >= val[1],
-                                                self.model.__dict__[key] <= val[2]))
 
         res = await session.execute(stmt)
         return [row[0].dict() for row in res.all()]
@@ -68,12 +62,31 @@ class SQLAlchemyRepository(AbstractRepository, metaclass=ABCMeta):
         res = await session.execute(stmt)
         return res.scalar_one()
 
-    async def delete(self, session, uuid: UUID):
+    async def delete(self, session: AsyncSession, uuid: UUID):
         stmt = delete(self.model).where(self.model.uuid == uuid).returning(self.model.uuid)
         res = await session.execute(stmt)
         return res
 
-    async def delete_all(self, session, filter_dict: dict = None, **filter_by):
+    async def delete_all(self, session: AsyncSession, filter_dict: dict = None, **filter_by):
         stmt = delete(self.model).filter_by(**filter_by)
         res = await session.execute(stmt)
         return res
+
+
+class TimeStampRepository(SQLAlchemyRepository):
+    @property
+    @abstractmethod
+    def model(self):
+        """Model class for SQLAlchemy."""
+
+    async def get_all_created_after(self, session: AsyncSession, timestamp: datetime, **filter_by):
+        stmt = select(self.model).filter_by(**filter_by).where(self.model.created_at > timestamp)
+
+        res = await session.execute(stmt)
+        return [row[0].dict() for row in res.all()]
+
+    async def get_all_deleted_after(self, session: AsyncSession, timestamp: datetime, **filter_by):
+        stmt = select(self.model).filter_by(**filter_by).where(self.model.deleted_at > timestamp)
+
+        res = await session.execute(stmt)
+        return [row[0].dict() for row in res.all()]

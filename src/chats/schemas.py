@@ -17,7 +17,6 @@ class ChatRead(BaseModel):
 
 
 class ChatUpdate(BaseModel):
-    uuid: UUID
     name: str
     model: str | None
     context_size: int

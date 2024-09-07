@@ -8,7 +8,7 @@ class Message(IModel):
     __tablename__ = 'message'
 
     uuid = Column(Uuid, primary_key=True, nullable=False)
-    chat_uuid = Column(ForeignKey(Chat.uuid), nullable=False)
+    chat_uuid = Column(ForeignKey(Chat.uuid), nullable=False, index=True)
     created_at = Column(TIMESTAMP, nullable=False)
     deleted_at = Column(TIMESTAMP, nullable=True)
     role = Column(String, nullable=False)

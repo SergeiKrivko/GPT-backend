@@ -10,10 +10,6 @@ from src.utils.unitofwork import IUnitOfWork
 
 
 class MessageService:
-    STATUS_PROGRESS = 'progress'
-    STATUS_COMPLETED = 'completed'
-    STATUS_FAILED = 'failed'
-
     def __init__(self, message_repository: MessageRepository, chat_service: ChatService, reply_service: ReplyService):
         self.message_repository = message_repository
         self.chat_service = chat_service

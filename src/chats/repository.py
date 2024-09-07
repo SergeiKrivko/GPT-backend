@@ -1,6 +1,6 @@
-from src.utils.repository import SQLAlchemyRepository
+from src.utils.repository import TimeStampRepository
 from src.chats.models import Chat
 
 
-class ChatRepository(SQLAlchemyRepository):
+class ChatRepository(TimeStampRepository):
     model = Chat

@@ -9,20 +9,13 @@ from src.utils.unitofwork import IUnitOfWork
 
 
 class ChatService:
-    STATUS_PROGRESS = 'progress'
-    STATUS_COMPLETED = 'completed'
-    STATUS_FAILED = 'failed'
-
     def __init__(self, chat_repository: ChatRepository):
         self.chat_repository = chat_repository
 
     async def get_chats(self, uow: IUnitOfWork, user: uuid.UUID) -> list[ChatRead]:
         async with uow:
             chats_list = await self.chat_repository.get_all(uow.session, user=user)
-            res = []
-            for chat in chats_list:
-                res.append(self.chat_dict_to_read_model(chat))
-            return res
+            return [self.chat_dict_to_read_model(chat) for chat in chats_list]
 
     async def get_chat(self, uow: IUnitOfWork, chat_uuid: uuid.UUID):
         async with uow:
@@ -38,7 +31,7 @@ class ChatService:
 
             await self.chat_repository.add(uow.session, chat_dict)
             await uow.commit()
-            sio.emit('new_chats', [chat_dict])
+            await sio.emit('new_chats', [chat_dict])
 
             return chat_dict['uuid']
 
@@ -47,14 +40,14 @@ class ChatService:
             chat_dict = self.chat_update_model_to_dict(chat)
             await self.chat_repository.edit(uow.session, chat_uuid, chat_dict)
             await uow.commit()
-            sio.emit('update_chats', [chat_dict])
+            await sio.emit('update_chats', [chat_dict])
             return chat_uuid
 
     async def mark_chat_deleted(self, uow: IUnitOfWork, chat_uuid: uuid.UUID):
         async with uow:
             await self.chat_repository.edit(uow.session, chat_uuid, {'deleted_at': datetime.now(tz=None)})
             await uow.commit()
-            sio.emit('delete_chats', [chat_uuid])
+            await sio.emit('delete_chats', [chat_uuid])
             return chat_uuid
 
     @staticmethod
@@ -85,7 +78,6 @@ class ChatService:
     @staticmethod
     def chat_update_model_to_dict(chat: ChatUpdate) -> dict:
         return {
-            'uuid': chat.uuid,
             'name': chat.name,
             'model': chat.model,
             'context_size': chat.context_size,

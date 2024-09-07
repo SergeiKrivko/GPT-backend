@@ -1,5 +1,4 @@
 import uuid
-from datetime import datetime
 from typing import Literal
 from uuid import UUID, uuid4
 
@@ -9,10 +8,6 @@ from src.utils.unitofwork import IUnitOfWork
 
 
 class ReplyService:
-    STATUS_PROGRESS = 'progress'
-    STATUS_COMPLETED = 'completed'
-    STATUS_FAILED = 'failed'
-
     def __init__(self, reply_repository: ReplyRepository):
         self.reply_repository = reply_repository
 

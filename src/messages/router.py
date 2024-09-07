@@ -1,11 +1,11 @@
 from uuid import UUID
 
-from fastapi import APIRouter, UploadFile
+from fastapi import APIRouter
 
 from src.authentication.exceptions import NotAuthenticatedError
-from src.messages.exceptions import ReadMessageDenied, MessageNotFoundError
+from src.messages.exceptions import ReadMessageDenied, MessageNotFoundError, DeleteMessageDenied
 from src.messages.schemas import MessageCreate
-from src.utils.dependency import MessageServiceDep, AuthenticationDep, AuthenticationServiceDep, UOWDep, ChatServiceDep
+from src.utils.dependency import MessageServiceDep, UOWDep, ChatServiceDep, AuthenticatedUserDep
 from src.utils.exceptions import exception_handler
 from src.utils.logic import equal_uuids
 
@@ -16,10 +16,9 @@ router = APIRouter(prefix='/messages', tags=['Messages'])
 @exception_handler
 async def get_messages(message_service: MessageServiceDep,
                        chat_service: ChatServiceDep,
-                       authentication_service: AuthenticationServiceDep,
+                       author: AuthenticatedUserDep,
                        uow: UOWDep,
-                       token: AuthenticationDep):
-    author = await authentication_service.get_authenticated_user(uow, token)
+                       ):
     if not author:
         raise NotAuthenticatedError
 
@@ -43,13 +42,9 @@ async def get_messages(message_service: MessageServiceDep,
 async def get_message(uuid: UUID,
                       message_service: MessageServiceDep,
                       chat_service: ChatServiceDep,
-                      authentication_service: AuthenticationServiceDep,
+                      author: AuthenticatedUserDep,
                       uow: UOWDep,
-                      token: AuthenticationDep):
-    author = await authentication_service.get_authenticated_user(uow, token)
-    if not author:
-        raise NotAuthenticatedError
-
+                      ):
     message = await message_service.get_message(uow, uuid)
     if not message:
         raise MessageNotFoundError
@@ -69,13 +64,9 @@ async def get_message(uuid: UUID,
 @exception_handler
 async def post_messages(message: MessageCreate,
                         message_service: MessageServiceDep,
-                        authentication_service: AuthenticationServiceDep,
+                        author: AuthenticatedUserDep,
                         uow: UOWDep,
-                        token: AuthenticationDep):
-    author = await authentication_service.get_authenticated_user(uow, token)
-    if not author:
-        raise NotAuthenticatedError
-
+                        ):
     uuid = await message_service.add_message(uow, message)
     return {
         'data': str(uuid) if uuid else None,
@@ -88,13 +79,9 @@ async def post_messages(message: MessageCreate,
 async def delete_message(uuid: UUID,
                          message_service: MessageServiceDep,
                          chat_service: ChatServiceDep,
-                         authentication_service: AuthenticationServiceDep,
+                         author: AuthenticatedUserDep,
                          uow: UOWDep,
-                         token: AuthenticationDep):
-    author = await authentication_service.get_authenticated_user(uow, token)
-    if not author:
-        raise NotAuthenticatedError
-
+                         ):
     message = await message_service.get_message(uow, uuid)
     if not message:
         raise MessageNotFoundError
@@ -102,11 +89,11 @@ async def delete_message(uuid: UUID,
     chat = await chat_service.get_chat(uow, message.chat_uuid)
 
     if not equal_uuids(author.uid, chat.user):
-        raise ReadMessageDenied
+        raise DeleteMessageDenied
 
     await message_service.mark_message_deleted(uow, uuid)
 
     return {
-        'data': None,
+        'data': str(uuid),
         'detail': 'Message was marked deleted.'
     }

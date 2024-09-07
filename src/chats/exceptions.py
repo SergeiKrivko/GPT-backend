@@ -3,7 +3,7 @@ from src.utils.exceptions import NotFoundError
 
 class ReadChatDenied(PermissionError):
     def __str__(self):
-        return 'Author is not permitted to read chats.'
+        return 'Author is not permitted to read this chat.'
 
 
 class InsertChatDenied(PermissionError):
@@ -13,7 +13,12 @@ class InsertChatDenied(PermissionError):
 
 class DeleteChatDenied(PermissionError):
     def __str__(self):
-        return 'Author is not permitted to delete chats.'
+        return 'Author is not permitted to delete this chat.'
+
+
+class UpdateChatDenied(PermissionError):
+    def __str__(self):
+        return 'Author is not permitted to update this chat.'
 
 
 class ChatNotFoundError(NotFoundError):

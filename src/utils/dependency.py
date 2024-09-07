@@ -4,15 +4,14 @@ from fastapi import Depends, Form
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from src.authentication.client import AuthClient
+from src.authentication.schemas import UserRead
 from src.authentication.service import AuthenticationService
+from src.chats.repository import ChatRepository
+from src.chats.service import ChatService
 from src.messages.repository import MessageRepository
 from src.messages.service import MessageService
 from src.replys.repository import ReplyRepository
 from src.replys.service import ReplyService
-
-from src.chats.repository import ChatRepository
-from src.chats.service import ChatService
-
 from src.utils.unitofwork import IUnitOfWork, UnitOfWork
 
 auth_client = AuthClient()
@@ -53,3 +52,12 @@ MessageServiceDep = Annotated[MessageService, Depends(get_message_service)]
 UOWDep = Annotated[IUnitOfWork, Depends(UnitOfWork)]
 AuthenticationDep = Annotated[str, Depends(get_authentication_token)]
 FormDep = Annotated[str | None, Form()]
+
+
+async def get_authenticated_user(token: AuthenticationDep,
+                                 service: AuthenticationServiceDep):
+    res = await service.get_authenticated_user(token)
+    return res
+
+
+AuthenticatedUserDep = Annotated[UserRead, Depends(get_authenticated_user)]

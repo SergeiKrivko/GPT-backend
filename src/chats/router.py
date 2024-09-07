@@ -3,9 +3,9 @@ from uuid import UUID
 from fastapi import APIRouter
 
 from src.authentication.exceptions import NotAuthenticatedError
-from src.chats.exceptions import ReadChatDenied, ChatNotFoundError
+from src.chats.exceptions import ReadChatDenied, ChatNotFoundError, UpdateChatDenied, DeleteChatDenied
 from src.chats.schemas import ChatUpdate
-from src.utils.dependency import ChatServiceDep, AuthenticationDep, AuthenticationServiceDep, UOWDep
+from src.utils.dependency import ChatServiceDep, UOWDep, AuthenticatedUserDep
 from src.utils.exceptions import exception_handler
 from src.utils.logic import equal_uuids
 
@@ -15,20 +15,16 @@ router = APIRouter(prefix='/chats', tags=['Chats'])
 @router.get('')
 @exception_handler
 async def get_chats(chat_service: ChatServiceDep,
-                    authentication_service: AuthenticationServiceDep,
+                    author: AuthenticatedUserDep,
                     uow: UOWDep,
-                    token: AuthenticationDep):
-    author = await authentication_service.get_authenticated_user(uow, token)
-    if not author:
-        raise NotAuthenticatedError
-
+                    ):
     chats = await chat_service.get_chats(uow, author.uid)
     if not chats:
         raise ChatNotFoundError
 
     return {
         'data': chats,
-        'detail': 'Chat was selected.'
+        'detail': 'Chats were selected.'
     }
 
 
@@ -36,13 +32,9 @@ async def get_chats(chat_service: ChatServiceDep,
 @exception_handler
 async def get_chat(uuid: UUID,
                    chat_service: ChatServiceDep,
-                   authentication_service: AuthenticationServiceDep,
+                   author: AuthenticatedUserDep,
                    uow: UOWDep,
-                   token: AuthenticationDep):
-    author = await authentication_service.get_authenticated_user(uow, token)
-    if not author:
-        raise NotAuthenticatedError
-
+                   ):
     chat = await chat_service.get_chat(uow, uuid)
     if not chat:
         raise ChatNotFoundError
@@ -59,10 +51,9 @@ async def get_chat(uuid: UUID,
 @router.post('')
 @exception_handler
 async def post_chats(chat_service: ChatServiceDep,
-                     authentication_service: AuthenticationServiceDep,
+                     author: AuthenticatedUserDep,
                      uow: UOWDep,
-                     token: AuthenticationDep):
-    author = await authentication_service.get_authenticated_user(uow, token)
+                     ):
     if not author:
         raise NotAuthenticatedError
 
@@ -78,10 +69,9 @@ async def post_chats(chat_service: ChatServiceDep,
 async def update_chat(uuid: UUID,
                       chat_update: ChatUpdate,
                       chat_service: ChatServiceDep,
-                      authentication_service: AuthenticationServiceDep,
+                      author: AuthenticatedUserDep,
                       uow: UOWDep,
-                      token: AuthenticationDep):
-    author = await authentication_service.get_authenticated_user(uow, token)
+                      ):
     if not author:
         raise NotAuthenticatedError
 
@@ -90,12 +80,12 @@ async def update_chat(uuid: UUID,
         raise ChatNotFoundError
 
     if not equal_uuids(author.uid, chat.user):
-        raise ReadChatDenied
+        raise UpdateChatDenied
 
     await chat_service.update_chat(uow, uuid, chat_update)
 
     return {
-        'data': None,
+        'data': str(uuid),
         'detail': 'Chat was updated.'
     }
 
@@ -104,10 +94,9 @@ async def update_chat(uuid: UUID,
 @exception_handler
 async def delete_chat(uuid: UUID,
                       chat_service: ChatServiceDep,
-                      authentication_service: AuthenticationServiceDep,
+                      author: AuthenticatedUserDep,
                       uow: UOWDep,
-                      token: AuthenticationDep):
-    author = await authentication_service.get_authenticated_user(uow, token)
+                      ):
     if not author:
         raise NotAuthenticatedError
 
@@ -116,11 +105,11 @@ async def delete_chat(uuid: UUID,
         raise ChatNotFoundError
 
     if not equal_uuids(author.uid, chat.user):
-        raise ReadChatDenied
+        raise DeleteChatDenied
 
     await chat_service.mark_chat_deleted(uow, uuid)
 
     return {
-        'data': None,
+        'data': str(uuid),
         'detail': 'Chat was marked deleted.'
     }

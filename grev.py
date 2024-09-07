@@ -11,6 +11,6 @@ if sys.platform == 'win32':
 else:
     path = ".venv/bin"
 
-message = 'initial'
+message = input('Enter migration name: ')
 
 subprocess.run(f"{path}/alembic -c migrations/alembic.ini revision --message='{message}' --autogenerate")
