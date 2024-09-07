@@ -1,12 +1,10 @@
 import uuid
 from datetime import datetime
 
-from src.chats.schemas import ChatRead
 from src.chats.service import ChatService
 from src.messages.repository import MessageRepository
 from src.messages.schemas import MessageRead, MessageCreate
 from src.replys.service import ReplyService
-
 from src.utils.unitofwork import IUnitOfWork
 
 
@@ -25,7 +23,9 @@ class MessageService:
             messages_list = await self.message_repository.get_all(uow.session, chat_uuid=chat_uuid)
             res = []
             for message in messages_list:
-                res.append(self.message_dict_to_read_model(message))
+                message_model = self.message_dict_to_read_model(message)
+                await self.__get_reply(uow, message_model)
+                res.append(message_model)
             return res
 
     async def get_message(self, uow: IUnitOfWork, message_uuid: uuid.UUID):
@@ -33,15 +33,30 @@ class MessageService:
             message_dict = await self.message_repository.get(uow.session, uuid=message_uuid)
             if not message_dict:
                 return None
-            return self.message_dict_to_read_model(message_dict)
+            message_model = self.message_dict_to_read_model(message_dict)
+            await self.__get_reply(uow, message_model)
+            return message_model
+        
+    async def __get_reply(self, uow: IUnitOfWork, message: MessageRead):
+        reply_list = await self.reply_service.get_replys(uow, message.uuid)
+        replys: dict[str: list[uuid.UUID]] = {}
+        for reply in reply_list:
+            if reply.type not in replys:
+                replys[reply.type] = []
+            replys[reply.type].append(reply)
+        message.reply = replys
 
     async def add_message(self, uow: IUnitOfWork, model: MessageCreate):
         async with uow:
             chat = await self.chat_service.get_chat(uow, model.chat_uuid)
             message_dict = self.message_create_model_to_dict(model)
             message_dict['model'] = chat.model
-            message_dict['context_size'] = chat.context_size
             message_dict['temperature'] = chat.temperature
+
+            new_id = message_dict['uuid']
+            for key, item in model.reply:
+                for message_id in item:
+                    await self.reply_service.add_reply(uow, message_id, new_id, key)
 
             await self.message_repository.add(uow.session, message_dict)
             await uow.commit()
@@ -63,7 +78,6 @@ class MessageService:
             role=message_dict['role'],
             content=message_dict['content'],
             model=message_dict['model'],
-            context_size=message_dict['context_size'],
             temperature=message_dict['temperature'],
         )
 
@@ -77,6 +91,5 @@ class MessageService:
             'role': create_model.role,
             'content': create_model.content,
             'model': None,
-            'context_size': 0,
             'temperature': 0.5,
         }

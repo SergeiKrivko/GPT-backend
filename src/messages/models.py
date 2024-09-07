@@ -14,7 +14,6 @@ class Message(IModel):
     role = Column(String, nullable=False)
     content = Column(String, nullable=False)
     model = Column(String, nullable=True)
-    context_size = Column(Integer, nullable=False)
     temperature = Column(Float, nullable=False)
 
     def dict(self):
@@ -26,6 +25,5 @@ class Message(IModel):
             'role': self.role,
             'content': self.content,
             'model': self.model,
-            'context_size': self.context_size,
             'temperature': self.temperature,
         }

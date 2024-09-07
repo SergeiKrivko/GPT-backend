@@ -13,11 +13,12 @@ class MessageRead(BaseModel):
     role: str
     content: str
     model: str | None
-    context_size: int
     temperature: float
+    reply: list[str] = []
 
 
 class MessageCreate(BaseModel):
     chat_uuid: UUID
     role: str
     content: str
+    reply: dict[str: list[UUID]] = {}
