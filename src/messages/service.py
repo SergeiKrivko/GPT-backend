@@ -20,6 +20,14 @@ class MessageService:
         self.chat_service = chat_service
         self.reply_service = reply_service
 
+    async def get_messages(self, uow: IUnitOfWork, chat_uuid: uuid.UUID) -> list[MessageRead]:
+        async with uow:
+            messages_list = await self.message_repository.get_all(uow.session, chat_uuid=chat_uuid)
+            res = []
+            for message in messages_list:
+                res.append(self.message_dict_to_read_model(message))
+            return res
+
     async def get_message(self, uow: IUnitOfWork, message_uuid: uuid.UUID):
         async with uow:
             message_dict = await self.message_repository.get(uow.session, uuid=message_uuid)
@@ -29,7 +37,7 @@ class MessageService:
 
     async def add_message(self, uow: IUnitOfWork, model: MessageCreate):
         async with uow:
-            chat = await self.chat_service.get_chat(uow.session, model.chat_id)
+            chat = await self.chat_service.get_chat(uow, model.chat_uuid)
             message_dict = self.message_create_model_to_dict(model)
             message_dict['model'] = chat.model
             message_dict['context_size'] = chat.context_size
@@ -38,6 +46,12 @@ class MessageService:
             await self.message_repository.add(uow.session, message_dict)
             await uow.commit()
             return message_dict['uuid']
+
+    async def mark_message_deleted(self, uow: IUnitOfWork, message_uuid: uuid.UUID):
+        async with uow:
+            await self.message_repository.edit(uow.session, message_uuid, {'deleted_at': datetime.now(tz=None)})
+            await uow.commit()
+            return message_uuid
 
     @staticmethod
     def message_dict_to_read_model(message_dict: dict) -> MessageRead:
