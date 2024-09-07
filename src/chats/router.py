@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter
@@ -14,11 +15,14 @@ router = APIRouter(prefix='/chats', tags=['Chats'])
 
 @router.get('')
 @exception_handler
-async def get_chats(chat_service: ChatServiceDep,
-                    author: AuthenticatedUserDep,
-                    uow: UOWDep,
-                    ):
-    chats = await chat_service.get_chats(uow, author.uid)
+async def get_chats(
+        chat_service: ChatServiceDep,
+        author: AuthenticatedUserDep,
+        uow: UOWDep,
+        created_after: datetime = None,
+        deleted_after: datetime = None,
+):
+    chats = await chat_service.get_chats(uow, author.uid, created_after, deleted_after)
     if not chats:
         raise ChatNotFoundError
 

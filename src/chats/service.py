@@ -4,7 +4,6 @@ from datetime import datetime
 from src.chats.repository import ChatRepository
 from src.chats.schemas import ChatRead, ChatUpdate
 from src.utils.socket_manager import sio
-
 from src.utils.unitofwork import IUnitOfWork
 
 
@@ -12,9 +11,15 @@ class ChatService:
     def __init__(self, chat_repository: ChatRepository):
         self.chat_repository = chat_repository
 
-    async def get_chats(self, uow: IUnitOfWork, user: uuid.UUID) -> list[ChatRead]:
+    async def get_chats(self, uow: IUnitOfWork, user: uuid.UUID, created_after: datetime = None,
+                        deleted_after: datetime = None) -> list[ChatRead]:
         async with uow:
-            chats_list = await self.chat_repository.get_all(uow.session, user=user)
+            if created_after is not None:
+                chats_list = await self.chat_repository.get_all_created_after(uow.session, created_after, user=user)
+            elif deleted_after is not None:
+                chats_list = await self.chat_repository.get_all_deleted_after(uow.session, deleted_after, user=user)
+            else:
+                chats_list = await self.chat_repository.get_all(uow.session, user=user)
             return [self.chat_dict_to_read_model(chat) for chat in chats_list]
 
     async def get_chat(self, uow: IUnitOfWork, chat_uuid: uuid.UUID):

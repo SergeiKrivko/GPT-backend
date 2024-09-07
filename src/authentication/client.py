@@ -3,9 +3,11 @@ import json
 
 from firebase_admin import auth
 import firebase_admin.credentials
+from firebase_admin.auth import ExpiredIdTokenError, InvalidIdTokenError
 
 from src.authentication.exceptions import NotAuthenticatedError
 from src.utils.config import FIREBASE_SA_KEY
+from src.utils.exceptions import AuthenticationError
 
 
 class AuthClient:
@@ -15,7 +17,10 @@ class AuthClient:
 
     @staticmethod
     async def verify_id_token(id_token: str) -> dict:
-        decoded_token = await asyncio.to_thread(lambda: auth.verify_id_token(id_token))
+        try:
+            decoded_token = await asyncio.to_thread(lambda: auth.verify_id_token(id_token))
+        except InvalidIdTokenError:
+            raise NotAuthenticatedError
         if 'uid' not in decoded_token:
             raise NotAuthenticatedError
         return decoded_token
