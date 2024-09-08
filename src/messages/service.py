@@ -5,7 +5,7 @@ from src.chats.service import ChatService
 from src.messages.repository import MessageRepository
 from src.messages.schemas import MessageRead, MessageCreate
 from src.replys.service import ReplyService
-from src.utils.socket_manager import sio
+from src.sockets.manager import sio
 from src.utils.unitofwork import IUnitOfWork
 
 

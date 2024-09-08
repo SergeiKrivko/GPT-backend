@@ -7,7 +7,7 @@ from starlette.middleware.cors import CORSMiddleware
 from src.chats.router import router as chats_router
 from src.messages.router import router as messages_router
 from src.utils.config import VERSION
-from src.utils.socket_manager import sio
+from src.sockets.manager import sio
 
 app = FastAPI(
     title='Nachert API',
@@ -78,13 +78,3 @@ app.include_router(chats_router, prefix='/api/v1')
 app.include_router(messages_router, prefix='/api/v1')
 
 app = socketio.ASGIApp(sio, app)
-
-
-@sio.event
-async def connect(sid, environ):
-    print("Client connected:", sid)
-
-
-@sio.event
-async def disconnect(sid):
-    print("Client disconnected:", sid)

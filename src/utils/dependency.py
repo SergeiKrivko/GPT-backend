@@ -12,13 +12,16 @@ from src.messages.repository import MessageRepository
 from src.messages.service import MessageService
 from src.replys.repository import ReplyRepository
 from src.replys.service import ReplyService
+from src.sockets.manager import SocketManager
 from src.utils.unitofwork import IUnitOfWork, UnitOfWork
 
 auth_client = AuthClient()
 authentication_service = AuthenticationService(auth_client)
 
+socket_manager = SocketManager(authentication_service)
+
 chat_repository = ChatRepository()
-chat_service = ChatService(chat_repository)
+chat_service = ChatService(chat_repository, socket_manager)
 
 reply_repository = ReplyRepository()
 reply_service = ReplyService(reply_repository)

@@ -86,7 +86,7 @@ async def update_chat(uuid: UUID,
     if not equal_uuids(author.uid, chat.user):
         raise UpdateChatDenied
 
-    await chat_service.update_chat(uow, uuid, chat_update)
+    await chat_service.update_chat(uow, uuid, chat_update, author.uid)
 
     return {
         'data': str(uuid),
@@ -111,7 +111,7 @@ async def delete_chat(uuid: UUID,
     if not equal_uuids(author.uid, chat.user):
         raise DeleteChatDenied
 
-    await chat_service.mark_chat_deleted(uow, uuid)
+    await chat_service.mark_chat_deleted(uow, uuid, author.uid)
 
     return {
         'data': str(uuid),
