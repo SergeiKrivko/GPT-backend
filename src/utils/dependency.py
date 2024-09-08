@@ -27,7 +27,7 @@ reply_repository = ReplyRepository()
 reply_service = ReplyService(reply_repository)
 
 message_repository = MessageRepository()
-message_service = MessageService(message_repository, chat_service, reply_service)
+message_service = MessageService(message_repository, chat_service, reply_service, socket_manager)
 
 security = HTTPBearer()
 

@@ -11,6 +11,8 @@ class ChatService:
     def __init__(self, chat_repository: ChatRepository, sockets_manager: SocketManager):
         self.chat_repository = chat_repository
         self.socket_manager = sockets_manager
+        self.socket_manager.subscribe('new_chat', self.__on_new_chat)
+        self.socket_manager.subscribe('update_chat', self.__on_update_chat)
 
     async def get_chats(self, uow: IUnitOfWork, user: uuid.UUID, created_after: datetime = None,
                         deleted_after: datetime = None) -> list[ChatRead]:
@@ -31,7 +33,7 @@ class ChatService:
                 return None
             return self.chat_dict_to_read_model(chat_dict)
 
-    async def add_chat(self, uow: IUnitOfWork, user: uuid.UUID):
+    async def add_chat(self, uow: IUnitOfWork, user: str):
         async with uow:
             chat_dict = self.chat_create_model_to_dict()
             chat_dict['user'] = user
@@ -42,20 +44,28 @@ class ChatService:
 
             return chat_dict['uuid']
 
-    async def update_chat(self, uow: IUnitOfWork, chat_uuid: uuid.UUID, chat: ChatUpdate, user: uuid.UUID):
+    async def update_chat(self, uow: IUnitOfWork, chat_uuid: uuid.UUID, chat: ChatUpdate, user: str):
         async with uow:
             chat_dict = self.chat_update_model_to_dict(chat)
             await self.chat_repository.edit(uow.session, chat_uuid, chat_dict)
             await uow.commit()
-            await self.socket_manager.emit_to_user(user, 'update_chats', [self.chat_dict_to_read_model(chat_dict)])
+
+            chat_dict = await self.chat_repository.get(uow.session, uuid=chat_uuid)
+            await self.socket_manager.emit_to_user(user, 'update_chat', self.chat_dict_to_read_model(chat_dict))
             return chat_uuid
 
-    async def mark_chat_deleted(self, uow: IUnitOfWork, chat_uuid: uuid.UUID, user: uuid.UUID):
+    async def mark_chat_deleted(self, uow: IUnitOfWork, chat_uuid: uuid.UUID, user: str):
         async with uow:
             await self.chat_repository.edit(uow.session, chat_uuid, {'deleted_at': datetime.now(tz=None)})
             await uow.commit()
             await self.socket_manager.emit_to_user(user, 'delete_chats', [str(chat_uuid)])
             return chat_uuid
+
+    async def __on_new_chat(self, uid: str, uow: IUnitOfWork):
+        await self.add_chat(uow, uid)
+
+    async def __on_update_chat(self, uid: str, uow: IUnitOfWork, chat_id=None, chat=None):
+        await self.update_chat(uow, chat_id, ChatUpdate(**chat), uid)
 
     @staticmethod
     def chat_dict_to_read_model(chat_dict: dict) -> ChatRead:

@@ -1,4 +1,6 @@
 from datetime import datetime
+from typing import Callable, Any
+from inspect import iscoroutinefunction
 from uuid import UUID
 
 import socketio
@@ -6,6 +8,7 @@ from pydantic import BaseModel
 
 from src.authentication.schemas import UserRead
 from src.authentication.service import AuthenticationService
+from src.utils.unitofwork import UnitOfWork, IUnitOfWork
 
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 
@@ -16,11 +19,20 @@ class SocketManager:
         self.__sids = dict()
         self.__auth_service = auth_service
 
-        self.subscribe('connect', self.__connect)
-        self.subscribe('disconnect', self.__disconnect)
+        self.__subscribe('connect', self.__connect)
+        self.__subscribe('disconnect', self.__disconnect)
+        self.__unit_of_work = UnitOfWork()
+
+    def subscribe(self, key, handler: Callable):
+        async def func(sid, *args):
+            if iscoroutinefunction(handler):
+                await handler(self.__sids[sid], self.__unit_of_work, *args)
+            else:
+                handler(self.__sids[sid], self.__unit_of_work, *args)
+        self.__subscribe(key, func)
 
     @staticmethod
-    def subscribe(key, func):
+    def __subscribe(key, func):
         sio.on(key, func)
 
     @staticmethod
