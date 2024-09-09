@@ -1,8 +1,10 @@
+import asyncio
 import uuid
 from datetime import datetime
 
 from src.chats.schemas import ChatRead
 from src.chats.service import ChatService
+from src.gpt import gpt
 from src.messages.repository import MessageRepository
 from src.messages.schemas import MessageRead, MessageCreate
 from src.replys.service import ReplyService
@@ -33,7 +35,7 @@ class MessageService:
                 messages_list = await self.message_repository.get_all(uow.session, chat_uuid=chat_uuid)
             res = []
             for message in messages_list:
-                message_model = self.message_dict_to_read_model(message)
+                message_model = self.__message_dict_to_read_model(message)
                 await self.__get_reply(uow, message_model)
                 res.append(message_model)
             return res
@@ -43,7 +45,7 @@ class MessageService:
             message_dict = await self.message_repository.get(uow.session, uuid=message_uuid)
             if not message_dict:
                 return None
-            message_model = self.message_dict_to_read_model(message_dict)
+            message_model = self.__message_dict_to_read_model(message_dict)
             await self.__get_reply(uow, message_model)
             return message_model
 
@@ -56,10 +58,9 @@ class MessageService:
             replys[reply.type].append(reply)
         message.reply = replys
 
-    async def add_message(self, uow: IUnitOfWork, chat: ChatRead, model: MessageCreate, user):
+    async def add_message(self, uow: IUnitOfWork, chat: ChatRead, model: MessageCreate, user, prompt=False):
         async with uow:
-            chat = await self.chat_service.get_chat(uow, model.chat_uuid)
-            message_dict = self.message_create_model_to_dict(model)
+            message_dict = self.__message_create_model_to_dict(model)
             message_dict['model'] = chat.model
             message_dict['temperature'] = chat.temperature
 
@@ -70,8 +71,11 @@ class MessageService:
 
             await self.message_repository.add(uow.session, message_dict)
             await uow.commit()
-            await self.socket_manager.emit_to_user(user, 'new_messages',
-                                                   [self.message_dict_to_read_model(message_dict)])
+            message = self.__message_dict_to_read_model(message_dict)
+            await self.socket_manager.emit_to_user(user, 'new_messages', [message])
+
+            if prompt:
+                asyncio.create_task(self.run_gpt(uow, chat, message, user)).done()
 
             return message_dict['uuid']
 
@@ -82,13 +86,41 @@ class MessageService:
             await self.socket_manager.emit_to_user(user, 'delete_messages', [message_uuid])
             return message_uuid
 
-    async def __on_new_message(self, uid: str, uow: IUnitOfWork, data: dict):
+    async def run_gpt(self, uow, chat: ChatRead, message: MessageRead, user):
+        print(1)
+        res = []
+        write_message = None
+        print(2)
+        async for el in gpt.async_stream_response([
+            {'role': message.role, 'content': message.content}
+        ]):
+            if write_message is None:
+                message_id = await self.add_message(uow, chat, MessageCreate(
+                    chat_uuid=chat.uuid,
+                    role='assistant',
+                    content='',
+                ), user, prompt=False)
+                write_message = await self.get_message(uow, message_id)
+            res.append(el)
+            print(f"Gpt answer part: {el}")
+            await self.socket_manager.emit_to_user(user, 'message_add_content', {
+                'uuid': str(write_message.uuid),
+                'chat': str(chat.uuid),
+                'content': el,
+            })
+
+        await self.socket_manager.emit_to_user(user, 'message_finish', str(write_message.uuid))
+        await self.message_repository.edit(uow.session, write_message.uuid, {
+            'content': ''.join(res),
+        })
+
+    async def __on_new_message(self, uid: str, uow: IUnitOfWork, data: dict, prompt=False):
         message = MessageCreate(**data)
         chat = await self.chat_service.get_chat(uow, message.chat_uuid)
-        await self.add_message(uow, chat, message, uid)
+        await self.add_message(uow, chat, message, uid, prompt)
 
     @staticmethod
-    def message_dict_to_read_model(message_dict: dict) -> MessageRead:
+    def __message_dict_to_read_model(message_dict: dict) -> MessageRead:
         return MessageRead(
             uuid=message_dict['uuid'],
             chat_uuid=message_dict['chat_uuid'],
@@ -101,7 +133,7 @@ class MessageService:
         )
 
     @staticmethod
-    def message_create_model_to_dict(create_model: MessageCreate) -> dict:
+    def __message_create_model_to_dict(create_model: MessageCreate) -> dict:
         return {
             'uuid': uuid.uuid4(),
             'chat_uuid': create_model.chat_uuid,

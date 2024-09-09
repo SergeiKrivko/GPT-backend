@@ -6,6 +6,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from src.chats.router import router as chats_router
 from src.messages.router import router as messages_router
+from src.gpt.router import router as gpt_router
 from src.utils.config import VERSION
 from src.sockets.manager import sio
 
@@ -76,5 +77,6 @@ async def get_version_handler():
 
 app.include_router(chats_router, prefix='/api/v1')
 app.include_router(messages_router, prefix='/api/v1')
+app.include_router(gpt_router, prefix='/api/v1')
 
 app = socketio.ASGIApp(sio, app)
