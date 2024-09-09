@@ -1,0 +1,125 @@
+name: Build
+on: [push]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    name: Build Docker and push to GitHub Container Registry
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+#      - name: Send Telegram message
+#        uses: appleboy/telegram-action@master
+#        with:
+#          to: ${{ secrets.NACHERT_TELEGRAM_EVENTS_CHAT_ID }}
+#          token: ${{ secrets.NACHERT_TELEGRAM_EVENTS_TOKEN }}
+#          disable_notification: true
+#          format: markdown
+#          message: |
+#            *New push to the Container Registry!*
+#
+#            Author: ${{ github.actor }}
+#            Repository: ${{ github.repository }}
+#            Branch: ${{ github.ref }}
+#            Commit message: ${{ github.event.head_commit.message }}
+#
+#            See changes: https://github.com/${{ github.repository }}/commit/${{github.sha}}
+
+  deploy-to-dev:
+    name: Deploy the latest dev image to the dev VM
+    runs-on: ubuntu-latest
+    environment: dev
+    needs: build-and-push
+    # if: github.ref == 'refs/heads/dev'
+
+    steps:
+      - name: Update docker images on the dev VM via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd GPT-backend
+            sudo docker compose up --detach --pull always
+            docker container list --all
+
+#      - name: Send Telegram message
+#        uses: appleboy/telegram-action@master
+#        with:
+#          to: ${{ secrets.NACHERT_TELEGRAM_EVENTS_CHAT_ID }}
+#          token: ${{ secrets.NACHERT_TELEGRAM_EVENTS_TOKEN }}
+#          format: markdown
+#          message: |
+#            *New deployment to dev!*
+#
+#            Author: ${{ github.actor }}
+#            Repository: ${{ github.repository }}
+#            Commit message: ${{ github.event.head_commit.message }}
+#            Deployment: http://api.nachert.art
+#
+#            See changes: https://github.com/${{ github.repository }}/commit/${{github.sha}}
+
+#  database-migration-dev:
+#    name: Upgrade alembic revision on the dev deployment
+#    runs-on: ubuntu-latest
+#    environment: dev
+#    needs: deploy-to-dev
+#    if: github.ref == 'refs/heads/dev'
+#
+#    steps:
+#      - name: Upgrade alembic migration on the dev deployment
+#        uses: appleboy/ssh-action@v1.0.3
+#        with:
+#          host: ${{ secrets.SSH_HOST }}
+#          username: ${{ secrets.SSH_USER }}
+#          key: ${{ secrets.SSH_KEY }}
+#          port: ${{ secrets.SSH_PORT }}
+#          script: |
+#            cd GPT-backend
+#            sudo ./urev
+#
+#      - name: Send Telegram message
+#        uses: appleboy/telegram-action@master
+#        with:
+#          to: ${{ secrets.NACHERT_TELEGRAM_EVENTS_CHAT_ID }}
+#          token: ${{ secrets.NACHERT_TELEGRAM_EVENTS_TOKEN }}
+#          format: markdown
+#          message: |
+#            *New database migration on dev!*
+#
+#            Author: ${{ github.actor }}
+#            Repository: ${{ github.repository }}
+#            Deployment: http://api.nachert.art
