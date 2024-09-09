@@ -25,6 +25,8 @@ async def get_messages(message_service: MessageServiceDep,
     if not author:
         raise NotAuthenticatedError
 
+    print(created_after, created_after.__class__)
+
     chats = await chat_service.get_chats(uow, author.uid)
     messages = []
     for chat in chats:

@@ -68,7 +68,6 @@ def simple_response(messages: list[dict[str: str]], model=None, **kwargs):
 
 
 async def async_stream_response(messages: list[dict[str: str]], model=None, **kwargs):
-    print(3)
     res = []
     finished = False
 

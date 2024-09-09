@@ -9,6 +9,7 @@ from src.messages.router import router as messages_router
 from src.gpt.router import router as gpt_router
 from src.utils.config import VERSION
 from src.sockets.manager import sio
+import src.sockets.router
 
 app = FastAPI(
     title='GPT-chat API',

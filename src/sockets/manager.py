@@ -1,9 +1,10 @@
 from datetime import datetime
-from typing import Callable, Any
+from typing import Callable, Any, get_type_hints, get_origin, Annotated
 from inspect import iscoroutinefunction
 from uuid import UUID
 
 import socketio
+from fastapi.params import Depends
 from pydantic import BaseModel
 
 from src.authentication.schemas import UserRead
@@ -21,7 +22,6 @@ class SocketManager:
 
         self.__subscribe('connect', self.__connect)
         self.__subscribe('disconnect', self.__disconnect)
-        self.__unit_of_work = UnitOfWork()
 
     def subscribe(self, key, handler: Callable):
         async def func(sid, *args):
@@ -30,9 +30,9 @@ class SocketManager:
                 return
             user = self.__sids[sid]
             if iscoroutinefunction(handler):
-                await handler(user, self.__unit_of_work, *args)
+                await handler(user, *args)
             else:
-                handler(user, self.__unit_of_work, *args)
+                handler(user, *args)
         self.__subscribe(key, func)
 
     @staticmethod

@@ -20,7 +20,7 @@ class MessageService:
         self.reply_service = reply_service
         self.socket_manager = socket_manager
 
-        self.socket_manager.subscribe('new_message', self.__on_new_message)
+        # self.socket_manager.subscribe('new_message', self.__on_new_message)
 
     async def get_messages(self, uow: IUnitOfWork, chat_uuid: uuid.UUID,
                            created_after=None, deleted_after=None) -> list[MessageRead]:
@@ -87,37 +87,39 @@ class MessageService:
             return message_uuid
 
     async def run_gpt(self, uow, chat: ChatRead, message: MessageRead, user):
-        print(1)
         res = []
         write_message = None
-        print(2)
         async for el in gpt.async_stream_response([
             {'role': message.role, 'content': message.content}
         ]):
+            print(f"Gpt answer part: {el}")
             if write_message is None:
                 message_id = await self.add_message(uow, chat, MessageCreate(
                     chat_uuid=chat.uuid,
                     role='assistant',
-                    content='',
+                    content=el,
                 ), user, prompt=False)
                 write_message = await self.get_message(uow, message_id)
+            else:
+                await self.socket_manager.emit_to_user(user, 'message_add_content', {
+                    'uuid': str(write_message.uuid),
+                    'chat': str(chat.uuid),
+                    'content': el,
+                })
             res.append(el)
-            print(f"Gpt answer part: {el}")
-            await self.socket_manager.emit_to_user(user, 'message_add_content', {
-                'uuid': str(write_message.uuid),
-                'chat': str(chat.uuid),
-                'content': el,
-            })
 
         await self.socket_manager.emit_to_user(user, 'message_finish', str(write_message.uuid))
+        print(''.join(res))
         await self.message_repository.edit(uow.session, write_message.uuid, {
             'content': ''.join(res),
         })
+        await uow.commit()
 
-    async def __on_new_message(self, uid: str, uow: IUnitOfWork, data: dict, prompt=False):
-        message = MessageCreate(**data)
-        chat = await self.chat_service.get_chat(uow, message.chat_uuid)
-        await self.add_message(uow, chat, message, uid, prompt)
+
+    # async def __on_new_message(self, uow: UOWDep, uid: str, data: dict, prompt=False):
+    #     message = MessageCreate(**data)
+    #     chat = await self.chat_service.get_chat(uow, message.chat_uuid)
+    #     await self.add_message(uow, chat, message, uid, prompt)
 
     @staticmethod
     def __message_dict_to_read_model(message_dict: dict) -> MessageRead:

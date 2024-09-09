@@ -11,8 +11,8 @@ class ChatService:
     def __init__(self, chat_repository: ChatRepository, sockets_manager: SocketManager):
         self.chat_repository = chat_repository
         self.socket_manager = sockets_manager
-        self.socket_manager.subscribe('new_chat', self.__on_new_chat)
-        self.socket_manager.subscribe('update_chat', self.__on_update_chat)
+        # self.socket_manager.subscribe('new_chat', self.__on_new_chat)
+        # self.socket_manager.subscribe('update_chat', self.__on_update_chat)
 
     async def get_chats(self, uow: IUnitOfWork, user: uuid.UUID, created_after: datetime = None,
                         deleted_after: datetime = None) -> list[ChatRead]:
@@ -23,7 +23,7 @@ class ChatService:
             elif deleted_after is not None:
                 chats_list = await self.chat_repository.get_all_deleted_after(uow.session, deleted_after, user=user)
             else:
-                chats_list = await self.chat_repository.get_all(uow.session, user=user)
+                chats_list = await self.chat_repository.get_all(uow.session, user=user, deleted_at=None)
             return [self.chat_dict_to_read_model(chat) for chat in chats_list]
 
     async def get_chat(self, uow: IUnitOfWork, chat_uuid: uuid.UUID):
@@ -61,11 +61,11 @@ class ChatService:
             await self.socket_manager.emit_to_user(user, 'delete_chats', [str(chat_uuid)])
             return chat_uuid
 
-    async def __on_new_chat(self, uid: str, uow: IUnitOfWork):
-        await self.add_chat(uow, uid)
-
-    async def __on_update_chat(self, uid: str, uow: IUnitOfWork, chat_id=None, chat=None):
-        await self.update_chat(uow, chat_id, ChatUpdate(**chat), uid)
+    # async def __on_new_chat(self, uow: UOWDep, uid: str):
+    #     await self.add_chat(uow, uid)
+    #
+    # async def __on_update_chat(self, uow: UOWDep, uid: str, chat_id=None, chat=None):
+    #     await self.update_chat(uow, chat_id, ChatUpdate(**chat), uid)
 
     @staticmethod
     def chat_dict_to_read_model(chat_dict: dict) -> ChatRead:
