@@ -56,25 +56,25 @@ jobs:
 #
 #            See changes: https://github.com/${{ github.repository }}/commit/${{github.sha}}
 
-  deploy-to-dev:
-    name: Deploy the latest dev image to the dev VM
-    runs-on: ubuntu-latest
-    environment: dev
-    needs: build-and-push
-    # if: github.ref == 'refs/heads/dev'
-
-    steps:
-      - name: Update docker images on the dev VM via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            cd GPT-backend
-            sudo docker compose up --detach --pull always
-            docker container list --all
+#  deploy-to-dev:
+#    name: Deploy the latest dev image to the dev VM
+#    runs-on: ubuntu-latest
+#    environment: dev
+#    needs: build-and-push
+#    # if: github.ref == 'refs/heads/dev'
+#
+#    steps:
+#      - name: Update docker images on the dev VM via SSH
+#        uses: appleboy/ssh-action@v1.0.3
+#        with:
+#          host: ${{ secrets.SSH_HOST }}
+#          username: ${{ secrets.SSH_USER }}
+#          key: ${{ secrets.SSH_KEY }}
+#          port: ${{ secrets.SSH_PORT }}
+#          script: |
+#            cd GPT-backend
+#            sudo docker compose up --detach --pull always
+#            docker container list --all
 
 #      - name: Send Telegram message
 #        uses: appleboy/telegram-action@master

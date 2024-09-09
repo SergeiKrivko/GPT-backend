@@ -25,10 +25,14 @@ class SocketManager:
 
     def subscribe(self, key, handler: Callable):
         async def func(sid, *args):
+            if sid not in self.__sids:
+                print(f'Client {sid} subscribed, but not added to list')
+                return
+            user = self.__sids[sid]
             if iscoroutinefunction(handler):
-                await handler(self.__sids[sid], self.__unit_of_work, *args)
+                await handler(user, self.__unit_of_work, *args)
             else:
-                handler(self.__sids[sid], self.__unit_of_work, *args)
+                handler(user, self.__unit_of_work, *args)
         self.__subscribe(key, func)
 
     @staticmethod

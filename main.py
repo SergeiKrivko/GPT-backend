@@ -11,8 +11,8 @@ from src.utils.config import VERSION
 from src.sockets.manager import sio
 
 app = FastAPI(
-    title='Nachert API',
-    description='Asynchronous API for Nachert',
+    title='GPT-chat API',
+    description='Asynchronous API for GPT-chat',
     version=VERSION
 )
 
@@ -30,7 +30,7 @@ app.add_middleware(
 @app.get(f'/', tags=['Setup'])
 async def get_root_handler():
     return {
-        'data': 'Nachert API',
+        'data': 'GPT-chat API',
         'detail': f'Visit /docs or /redoc for the full documentation.'
     }
 

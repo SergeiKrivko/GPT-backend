@@ -10,4 +10,4 @@ class AuthenticationService:
     @exception_handler
     async def get_authenticated_user(self, token: str):
         res = await self.auth_client.verify_id_token(token)
-        return UserRead(uid=res['uid'], name=res.get('name'), email=res.get('email'))
+        return UserRead(uid=res['uid'], name=res.get('name', ''), email=res.get('email', ''))
