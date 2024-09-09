@@ -28,15 +28,9 @@ async def on_request_updates(uid: str, timestamp):
 
     new_chats = await chat_service.get_chats(uow, uid, created_after=timestamp)
     deleted_chats = await chat_service.get_chats(uow, uid, deleted_after=timestamp)
-    chats = await chat_service.get_chats(uow, uid)
 
-    new_messages = []
-    deleted_messages = []
-    for chat in chats:
-        messages = await message_service.get_messages(uow, chat.uuid, created_after=timestamp)
-        new_messages.extend(messages)
-        messages = await message_service.get_messages(uow, chat.uuid, deleted_after=timestamp)
-        deleted_messages.extend(messages)
+    new_messages = await message_service.get_messages(uow, user=uid, created_after=timestamp)
+    deleted_messages = await message_service.get_messages(uow, user=uid, deleted_after=timestamp)
 
     await socket_manager.emit_to_user(uid, 'updates', {
         'new_chats': new_chats,

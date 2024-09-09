@@ -11,8 +11,6 @@ class ChatService:
     def __init__(self, chat_repository: ChatRepository, sockets_manager: SocketManager):
         self.chat_repository = chat_repository
         self.socket_manager = sockets_manager
-        # self.socket_manager.subscribe('new_chat', self.__on_new_chat)
-        # self.socket_manager.subscribe('update_chat', self.__on_update_chat)
 
     async def get_chats(self, uow: IUnitOfWork, user: uuid.UUID, created_after: datetime = None,
                         deleted_after: datetime = None) -> list[ChatRead]:

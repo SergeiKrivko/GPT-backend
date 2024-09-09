@@ -16,22 +16,18 @@ router = APIRouter(prefix='/messages', tags=['Messages'])
 @router.get('')
 @exception_handler
 async def get_messages(message_service: MessageServiceDep,
-                       chat_service: ChatServiceDep,
                        author: AuthenticatedUserDep,
                        uow: UOWDep,
+                       chat_uuid: UUID = None,
                        created_after: datetime.datetime = None,
                        deleted_after: datetime.datetime = None,
                        ):
     if not author:
         raise NotAuthenticatedError
 
-    print(created_after, created_after.__class__)
-
-    chats = await chat_service.get_chats(uow, author.uid)
-    messages = []
-    for chat in chats:
-        m = await message_service.get_messages(uow, chat.uuid, created_after, deleted_after)
-        messages.extend(m)
+    messages = await message_service.get_messages(uow, user=author.uid, chat_uuid=chat_uuid,
+                                                  created_after=created_after,
+                                                  deleted_after=deleted_after)
 
     if not messages:
         raise MessageNotFoundError
@@ -46,7 +42,6 @@ async def get_messages(message_service: MessageServiceDep,
 @exception_handler
 async def get_message(uuid: UUID,
                       message_service: MessageServiceDep,
-                      chat_service: ChatServiceDep,
                       author: AuthenticatedUserDep,
                       uow: UOWDep,
                       ):
@@ -54,9 +49,7 @@ async def get_message(uuid: UUID,
     if not message:
         raise MessageNotFoundError
 
-    chat = await chat_service.get_chat(uow, message.chat_uuid)
-
-    if not equal_uuids(author.uid, chat.user):
+    if not equal_uuids(author.uid, message.user):
         raise ReadMessageDenied
 
     return {
@@ -89,7 +82,6 @@ async def post_messages(message: MessageCreate,
 @exception_handler
 async def delete_message(uuid: UUID,
                          message_service: MessageServiceDep,
-                         chat_service: ChatServiceDep,
                          author: AuthenticatedUserDep,
                          uow: UOWDep,
                          ):
@@ -97,9 +89,7 @@ async def delete_message(uuid: UUID,
     if not message:
         raise MessageNotFoundError
 
-    chat = await chat_service.get_chat(uow, message.chat_uuid)
-
-    if not equal_uuids(author.uid, chat.user):
+    if not equal_uuids(author.uid, message.user):
         raise DeleteMessageDenied
 
     await message_service.mark_message_deleted(uow, uuid, author.uid)

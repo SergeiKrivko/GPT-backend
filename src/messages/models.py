@@ -15,6 +15,7 @@ class Message(IModel):
     content = Column(String, nullable=False)
     model = Column(String, nullable=True)
     temperature = Column(Float, nullable=False)
+    user = Column(String, nullable=False)
 
     def dict(self):
         return {

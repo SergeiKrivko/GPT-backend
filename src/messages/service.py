@@ -20,19 +20,22 @@ class MessageService:
         self.reply_service = reply_service
         self.socket_manager = socket_manager
 
-        # self.socket_manager.subscribe('new_message', self.__on_new_message)
-
-    async def get_messages(self, uow: IUnitOfWork, chat_uuid: uuid.UUID,
+    async def get_messages(self, uow: IUnitOfWork, chat_uuid: uuid.UUID = None, user: str = None,
                            created_after=None, deleted_after=None) -> list[MessageRead]:
+        filters = dict()
+        if user is not None:
+            filters['user'] = user
+        if chat_uuid is not None:
+            filters['chat_uuid'] = chat_uuid
         async with uow:
             if created_after is not None:
                 messages_list = await self.message_repository.get_all_created_after(uow.session, created_after,
-                                                                                    chat_uuid=chat_uuid)
+                                                                                    **filters)
             elif deleted_after is not None:
                 messages_list = await self.message_repository.get_all_deleted_after(uow.session, deleted_after,
-                                                                                    chat_uuid=chat_uuid)
+                                                                                    **filters)
             else:
-                messages_list = await self.message_repository.get_all(uow.session, chat_uuid=chat_uuid)
+                messages_list = await self.message_repository.get_all(uow.session, **filters)
             res = []
             for message in messages_list:
                 message_model = self.__message_dict_to_read_model(message)
@@ -61,6 +64,7 @@ class MessageService:
     async def add_message(self, uow: IUnitOfWork, chat: ChatRead, model: MessageCreate, user, prompt=False):
         async with uow:
             message_dict = self.__message_create_model_to_dict(model)
+            message_dict['user'] = user
             message_dict['model'] = chat.model
             message_dict['temperature'] = chat.temperature
 
