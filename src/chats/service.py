@@ -13,10 +13,13 @@ class ChatService:
         self.socket_manager = sockets_manager
 
     async def get_chats(self, uow: IUnitOfWork, user: uuid.UUID, created_after: datetime = None,
-                        deleted_after: datetime = None) -> list[ChatRead]:
+                        deleted_after: datetime = None, updated_after: datetime = None) -> list[ChatRead]:
         async with uow:
             if created_after is not None:
                 chats_list = await self.chat_repository.get_all_created_after(uow.session, created_after,
+                                                                              deleted_at=None, user=user)
+            elif updated_after is not None:
+                chats_list = await self.chat_repository.get_all_updated_after(uow.session, created_after,
                                                                               deleted_at=None, user=user)
             elif deleted_after is not None:
                 chats_list = await self.chat_repository.get_all_deleted_after(uow.session, deleted_after, user=user)
@@ -75,6 +78,8 @@ class ChatService:
             model=chat_dict['model'],
             context_size=chat_dict['context_size'],
             temperature=chat_dict['temperature'],
+            pinnded=chat_dict['pinned'],
+            archived=chat_dict['temperature'],
             user=chat_dict['user'],
         )
 
@@ -88,13 +93,18 @@ class ChatService:
             'model': None,
             'context_size': 0,
             'temperature': 0.5,
+            'pinned': False,
+            'archived': False,
         }
 
     @staticmethod
     def chat_update_model_to_dict(chat: ChatUpdate) -> dict:
         return {
             'name': chat.name,
+            'updated_at': datetime.now(tz=None),
             'model': chat.model,
             'context_size': chat.context_size,
             'temperature': chat.temperature,
+            'pinned': chat.pinned,
+            'archived': chat.archived,
         }

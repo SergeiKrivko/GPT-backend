@@ -39,6 +39,7 @@ async def on_request_updates(uid: str, timestamp):
     uow = UnitOfWork()
 
     new_chats = await chat_service.get_chats(uow, uid, created_after=timestamp)
+    updated_chats = await chat_service.get_chats(uow, uid, updated_after=timestamp)
     deleted_chats = await chat_service.get_chats(uow, uid, deleted_after=timestamp)
 
     new_messages = await message_service.get_messages(uow, user=uid, created_after=timestamp)
@@ -46,6 +47,7 @@ async def on_request_updates(uid: str, timestamp):
 
     await socket_manager.emit_to_user(uid, 'updates', {
         'new_chats': new_chats,
+        'updated_chats': updated_chats,
         'deleted_chats': deleted_chats,
         'new_messages': new_messages,
         'deleted_messages': deleted_messages

@@ -13,6 +13,8 @@ class ChatRead(BaseModel):
     model: str | None
     context_size: int
     temperature: float
+    pinned: bool
+    archived: bool
     user: str
 
 
@@ -21,3 +23,5 @@ class ChatUpdate(BaseModel):
     model: str | None
     context_size: int
     temperature: float
+    pinned: bool
+    archived: bool
