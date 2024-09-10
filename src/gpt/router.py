@@ -16,7 +16,7 @@ router = APIRouter(prefix='/gpt', tags=['GPT'])
 
 @router.get('/models')
 @exception_handler
-async def get_chats():
+async def get_models_handler():
     return {
         'data': gpt.get_models(),
         'detail': 'GPT models were selected.'

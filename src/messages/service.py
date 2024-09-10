@@ -96,7 +96,7 @@ class MessageService:
         async for el in gpt.async_stream_response([
             {'role': message.role, 'content': message.content}
         ]):
-            print(f"Gpt answer part: {el}")
+            # print(f"Gpt answer part: {el}")
             if write_message is None:
                 message_id = await self.add_message(uow, chat, MessageCreate(
                     chat_uuid=chat.uuid,
