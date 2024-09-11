@@ -68,6 +68,8 @@ class SocketManager:
 
     async def __disconnect(self, sid):
         print("Client disconnected:", sid)
+        if sid not in self.__sids:
+            return
         uid = self.__sids[sid]
         self.__sids.pop(sid)
         self.__users[uid].remove(sid)

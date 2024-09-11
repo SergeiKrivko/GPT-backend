@@ -19,9 +19,9 @@ class ChatRead(BaseModel):
 
 
 class ChatUpdate(BaseModel):
-    name: str
-    model: str | None
-    context_size: int
-    temperature: float
-    pinned: bool
-    archived: bool
+    name: str | None = None
+    model: str | None = None
+    context_size: int | None = None
+    temperature: float | None = None
+    pinned: bool | None = None
+    archived: bool | None = None

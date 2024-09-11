@@ -70,6 +70,7 @@ class ChatService:
 
     @staticmethod
     def chat_dict_to_read_model(chat_dict: dict) -> ChatRead:
+        print(chat_dict)
         return ChatRead(
             uuid=chat_dict['uuid'],
             created_at=chat_dict['created_at'],
@@ -78,8 +79,8 @@ class ChatService:
             model=chat_dict['model'],
             context_size=chat_dict['context_size'],
             temperature=chat_dict['temperature'],
-            pinnded=chat_dict['pinned'],
-            archived=chat_dict['temperature'],
+            pinned=chat_dict['pinned'],
+            archived=chat_dict['archived'],
             user=chat_dict['user'],
         )
 
@@ -99,12 +100,19 @@ class ChatService:
 
     @staticmethod
     def chat_update_model_to_dict(chat: ChatUpdate) -> dict:
-        return {
-            'name': chat.name,
+        res = {
             'updated_at': datetime.now(tz=None),
-            'model': chat.model,
-            'context_size': chat.context_size,
-            'temperature': chat.temperature,
-            'pinned': chat.pinned,
-            'archived': chat.archived,
         }
+        if chat.name is not None:
+            res['name'] = chat.name
+        if chat.model is not None:
+            res['model'] = chat.model
+        if chat.context_size is not None:
+            res['context_size'] = chat.context_size
+        if chat.temperature is not None:
+            res['temperature'] = chat.temperature
+        if chat.pinned is not None:
+            res['pinned'] = chat.pinned
+        if chat.archived is not None:
+            res['archived'] = chat.archived
+        return res

@@ -12,7 +12,7 @@ class ChatRepository(TimeStampRepository):
 
     async def get_all_updated_after(self, session: AsyncSession, timestamp: datetime, **filter_by):
         stmt = select(self.model).filter_by(**filter_by).where(
-            self.model.updated_at > timestamp and self.model.created_at <= timestamp)
+            self.model.updated_at > timestamp).where(self.model.created_at <= timestamp)
 
         res = await session.execute(stmt)
         return [row[0].dict() for row in res.all()]
