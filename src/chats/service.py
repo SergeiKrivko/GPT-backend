@@ -19,7 +19,7 @@ class ChatService:
                 chats_list = await self.chat_repository.get_all_created_after(uow.session, created_after,
                                                                               deleted_at=None, user=user)
             elif updated_after is not None:
-                chats_list = await self.chat_repository.get_all_updated_after(uow.session, created_after,
+                chats_list = await self.chat_repository.get_all_updated_after(uow.session, updated_after,
                                                                               deleted_at=None, user=user)
             elif deleted_after is not None:
                 chats_list = await self.chat_repository.get_all_deleted_after(uow.session, deleted_after, user=user)
