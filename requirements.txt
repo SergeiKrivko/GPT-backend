@@ -12,3 +12,4 @@ python-multipart==0.0.9
 python-socketio[asyncio]==5.11.4
 g4f~=0.3.2.6
 curl_cffi
+translatepy~=2.3

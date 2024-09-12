@@ -9,7 +9,7 @@ from src.messages.repository import MessageRepository
 from src.messages.schemas import MessageRead, MessageCreate
 from src.replys.service import ReplyService
 from src.sockets.manager import SocketManager
-from src.utils.unitofwork import IUnitOfWork
+from src.utils.unitofwork import IUnitOfWork, UnitOfWork
 
 
 class MessageService:
@@ -79,7 +79,7 @@ class MessageService:
             await self.socket_manager.emit_to_user(user, 'new_messages', [message])
 
             if prompt:
-                asyncio.create_task(self.run_gpt(uow, chat, message, user)).done()
+                asyncio.create_task(self.run_gpt(UnitOfWork(), chat, message, user)).done()
 
             return message_dict['uuid']
 

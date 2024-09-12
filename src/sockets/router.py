@@ -3,7 +3,7 @@ from datetime import datetime
 
 from src.chats.schemas import ChatUpdate
 from src.messages.schemas import MessageCreate
-from src.utils.dependency import UnitOfWork, chat_service, message_service, socket_manager
+from src.utils.dependency import UnitOfWork, chat_service, message_service, socket_manager, translate_service
 
 
 async def on_new_chat(uid: str):
@@ -35,7 +35,6 @@ async def on_delete_message(uid: str, message_id: uuid.UUID):
 async def on_request_updates(uid: str, timestamp):
     print(f"Request updates: {timestamp}")
     timestamp = datetime.fromisoformat(timestamp).replace(tzinfo=None)
-    print(timestamp, timestamp.__class__)
     uow = UnitOfWork()
 
     new_chats = await chat_service.get_chats(uow, uid, created_after=timestamp)
@@ -46,13 +45,14 @@ async def on_request_updates(uid: str, timestamp):
     new_messages = await message_service.get_messages(uow, user=uid, created_after=timestamp)
     deleted_messages = await message_service.get_messages(uow, user=uid, deleted_after=timestamp)
 
-    await socket_manager.emit_to_user(uid, 'updates', {
+    res = {
         'new_chats': new_chats,
         'updated_chats': updated_chats,
         'deleted_chats': deleted_chats,
         'new_messages': new_messages,
         'deleted_messages': deleted_messages
-    })
+    }
+    return res
 
 
 socket_manager.subscribe('new_chat', on_new_chat)
