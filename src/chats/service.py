@@ -70,7 +70,6 @@ class ChatService:
 
     @staticmethod
     def chat_dict_to_read_model(chat_dict: dict) -> ChatRead:
-        print(chat_dict)
         return ChatRead(
             uuid=chat_dict['uuid'],
             created_at=chat_dict['created_at'],

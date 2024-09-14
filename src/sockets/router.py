@@ -38,8 +38,7 @@ async def on_request_updates(uid: str, timestamp):
     uow = UnitOfWork()
 
     new_chats = await chat_service.get_chats(uow, uid, created_after=timestamp)
-    updated_chats = []
-    # updated_chats = await chat_service.get_chats(uow, uid, updated_after=timestamp)
+    updated_chats = await chat_service.get_chats(uow, uid, updated_after=timestamp)
     deleted_chats = await chat_service.get_chats(uow, uid, deleted_after=timestamp)
 
     new_messages = await message_service.get_messages(uow, user=uid, created_after=timestamp)
@@ -60,4 +59,5 @@ socket_manager.subscribe('update_chat', on_update_chat)
 socket_manager.subscribe('delete_chat', on_delete_chat)
 socket_manager.subscribe('new_message', on_new_message)
 socket_manager.subscribe('request_updates', on_request_updates)
+socket_manager.subscribe_with_response('updates_request', on_request_updates, 'updates_response')
 socket_manager.subscribe('delete_message', on_delete_message)

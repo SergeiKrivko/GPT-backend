@@ -4,12 +4,9 @@ from inspect import iscoroutinefunction
 from uuid import UUID
 
 import socketio
-from fastapi.params import Depends
 from pydantic import BaseModel
 
-from src.authentication.schemas import UserRead
 from src.authentication.service import AuthenticationService
-from src.utils.unitofwork import UnitOfWork, IUnitOfWork
 
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 
@@ -33,6 +30,24 @@ class SocketManager:
                 await handler(user, *args)
             else:
                 handler(user, *args)
+        self.__subscribe(key, func)
+
+    def subscribe_with_response(self, key, handler: Callable, response_key=None):
+        async def func(sid, *args):
+            if sid not in self.__sids:
+                print(f'Client {sid} subscribed, but not added to list')
+                return
+            user = self.__sids[sid]
+            if iscoroutinefunction(handler):
+                res = await handler(user, *args)
+            else:
+                res = handler(user, *args)
+            resp = {
+                'data': SocketManager.__data_to_json(res),
+                'time': datetime.now().isoformat(),
+            }
+            await sio.emit(response_key or key, resp, to=sid)
+
         self.__subscribe(key, func)
 
     @staticmethod

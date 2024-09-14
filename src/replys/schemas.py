@@ -9,3 +9,8 @@ class ReplyRead(BaseModel):
     from_uuid: UUID
     to_uuid: UUID
     type: Literal['prompt', 'context', 'explicit', 'implicit']
+
+
+class ReplyCreate(BaseModel):
+    to_uuid: UUID
+    type: Literal['prompt', 'context', 'explicit', 'implicit']

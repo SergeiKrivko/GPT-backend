@@ -4,6 +4,8 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from src.replys.schemas import ReplyRead, ReplyCreate
+
 
 class MessageRead(BaseModel):
     uuid: UUID
@@ -14,11 +16,11 @@ class MessageRead(BaseModel):
     content: str
     model: str | None
     temperature: float
-    reply: dict[str, list[str]] = dict()
+    reply: list[ReplyRead] = []
 
 
 class MessageCreate(BaseModel):
     chat_uuid: UUID
     role: str
     content: str
-    reply: dict[str, list[UUID]] = dict()
+    reply: list[ReplyCreate] = []
