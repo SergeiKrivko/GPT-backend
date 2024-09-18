@@ -1,8 +1,10 @@
+import sys
 from datetime import datetime
 
 import socketio
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
+from loguru import logger
 
 from src.chats.router import router as chats_router
 from src.messages.router import router as messages_router
@@ -10,7 +12,7 @@ from src.gpt.router import router as gpt_router
 from src.translate.router import router as translate_router
 from src.utils.config import VERSION
 from src.sockets.manager import sio
-import src.sockets.router
+from src.sockets.router import init as socket_init
 
 app = FastAPI(
     title='GPT-chat API',
@@ -82,4 +84,8 @@ app.include_router(messages_router, prefix='/api/v1')
 app.include_router(gpt_router, prefix='/api/v1')
 app.include_router(translate_router, prefix='/api/v1')
 
+socket_init()
+
 app = socketio.ASGIApp(sio, app)
+
+# logger.add(sys.stdout, colorize=True, format="<level>{level}:</level> {message}", level="INFO")

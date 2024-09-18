@@ -1,9 +1,10 @@
 from datetime import datetime
-from typing import Callable, Any, get_type_hints, get_origin, Annotated
+from typing import Callable
 from inspect import iscoroutinefunction
 from uuid import UUID
 
 import socketio
+from loguru import logger
 from pydantic import BaseModel
 
 from src.authentication.service import AuthenticationService
@@ -23,9 +24,10 @@ class SocketManager:
     def __get_decorator(self, key, handler: Callable):
         async def func(sid, *args):
             if sid not in self.__sids:
-                print(f'Client {sid} subscribed, but not added to list')
+                logger.warning(f"Socket '{key}' from {sid} received, but user not found")
                 return
             user = self.__sids[sid]
+            logger.info(f"Socket '{key}' from {sid} (user {user}) received")
             if iscoroutinefunction(handler):
                 res = await handler(user, *args)
             else:
@@ -34,6 +36,8 @@ class SocketManager:
                 'data': SocketManager.__data_to_json(res),
                 'time': datetime.now().isoformat(),
             }
+            if res:
+                logger.info(f"Processing '{key}' from {sid} (user {user}) completed. Emitting answer")
             return resp
         return func
 
@@ -70,18 +74,18 @@ class SocketManager:
         }
         for sid in self.__users.get(uid, []):
             await sio.emit(key, data, to=sid)
-            print(f"socket '{key}' emitted to", sid)
+            logger.info(f"Socket '{key}' emitted to {sid} (user {uid})")
 
     async def __connect(self, sid, environ, token=''):
         user = await self.__auth_service.get_authenticated_user(token)
-        print(f"Client connected: {sid} (user {user.uid})")
+        logger.info(f"Client connected: {sid} (user {user.uid})")
         if user.uid not in self.__users:
             self.__users[user.uid] = []
         self.__users[user.uid].append(sid)
         self.__sids[sid] = user.uid
 
     async def __disconnect(self, sid):
-        print("Client disconnected:", sid)
+        logger.info(f"Client disconnected: {sid}")
         if sid not in self.__sids:
             return
         uid = self.__sids[sid]
