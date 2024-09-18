@@ -20,19 +20,7 @@ class SocketManager:
         self.__subscribe('connect', self.__connect)
         self.__subscribe('disconnect', self.__disconnect)
 
-    def subscribe(self, key, handler: Callable):
-        async def func(sid, *args):
-            if sid not in self.__sids:
-                print(f'Client {sid} subscribed, but not added to list')
-                return
-            user = self.__sids[sid]
-            if iscoroutinefunction(handler):
-                await handler(user, *args)
-            else:
-                handler(user, *args)
-        self.__subscribe(key, func)
-
-    def subscribe_with_response(self, key, handler: Callable, response_key=None):
+    def __get_decorator(self, key, handler: Callable):
         async def func(sid, *args):
             if sid not in self.__sids:
                 print(f'Client {sid} subscribed, but not added to list')
@@ -46,6 +34,17 @@ class SocketManager:
                 'data': SocketManager.__data_to_json(res),
                 'time': datetime.now().isoformat(),
             }
+            return resp
+        return func
+
+    def subscribe(self, key, handler: Callable):
+        self.__subscribe(key, self.__get_decorator(key, handler))
+
+    def subscribe_with_response(self, key, handler: Callable, response_key=None):
+        dec = self.__get_decorator(key, handler)
+
+        async def func(sid, *args):
+            resp = await dec(sid, *args)
             await sio.emit(response_key or key, resp, to=sid)
 
         self.__subscribe(key, func)
