@@ -69,9 +69,9 @@ async def on_request_updates_v2(uid: str, timestamp):
     res = {
         'new_chats': new_chats,
         'updated_chats': updated_chats,
-        'deleted_chats': [c.uuid for c in deleted_chats],
+        'deleted_chats': [str(c.uuid) for c in deleted_chats],
         'new_messages': new_messages,
-        'deleted_messages': [m.uuid for m in deleted_messages]
+        'deleted_messages': [str(m.uuid) for m in deleted_messages]
     }
     return res
 
