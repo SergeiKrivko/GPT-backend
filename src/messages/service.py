@@ -2,6 +2,8 @@ import asyncio
 import uuid
 from datetime import datetime
 
+from loguru import logger
+
 from src.chats.schemas import ChatRead
 from src.chats.service import ChatService
 from src.gpt import gpt
@@ -94,11 +96,12 @@ class MessageService:
     async def run_gpt(self, uow, chat: ChatRead, message: MessageRead, user):
         res = []
         write_message = None
+        logger.info(f"Request to GPT for {user}")
         try:
             async for el in gpt.async_stream_response([
                 {'role': message.role, 'content': message.content}
             ]):
-                # print(f"Gpt answer part: {el}")
+                logger.debug(f"Gpt answer (user {user}) part: {repr(el)}")
                 if write_message is None:
                     message_id = await self.add_message(uow, chat, MessageCreate(
                         chat_uuid=chat.uuid,
@@ -114,11 +117,11 @@ class MessageService:
                     })
                 res.append(el)
         except Exception as ex:
-            print(f"{ex.__class__.__name__}: {ex}")
+            logger.error(f"{ex.__class__.__name__}: {ex}")
             await self.socket_manager.emit_to_user(user, 'gpt_error', f"{ex.__class__.__name__}: {ex}")
         else:
             await self.socket_manager.emit_to_user(user, 'message_finish', str(write_message.uuid))
-            print(''.join(res))
+            logger.info(f"GPT finished for {user}: {repr(''.join(res))}")
         await self.message_repository.edit(uow.session, write_message.uuid, {
             'content': ''.join(res),
         })
