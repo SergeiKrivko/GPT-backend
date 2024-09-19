@@ -17,10 +17,11 @@ class AuthClient:
 
     @staticmethod
     async def verify_id_token(id_token: str) -> dict:
+        if not id_token:
+            raise NotAuthenticatedError
         try:
             decoded_token = await asyncio.to_thread(lambda: auth.verify_id_token(id_token))
         except InvalidIdTokenError as e:
-            print(e)
             raise NotAuthenticatedError
         if 'uid' not in decoded_token:
             raise NotAuthenticatedError
