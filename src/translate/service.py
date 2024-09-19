@@ -1,5 +1,7 @@
 import asyncio
 
+from loguru import logger
+
 from translatepy import Translator
 from translatepy.models import LanguageResult, TranslationResult
 from translatepy.translators import YandexTranslate
@@ -11,12 +13,12 @@ class TranslateService:
 
     async def detect(self, text):
         res: LanguageResult = await asyncio.to_thread(lambda: self.__translator.language(text))
-        print(res.result)
+        logger.debug(f"Language detected: {res.result}")
         return res
 
     async def translate(self, text, lang):
         res: TranslationResult = await asyncio.to_thread(lambda: self.__translator.translate(text, lang))
-        print(res.result)
+        logger.debug(f"Message translated: {res.result}")
         return res
 
 

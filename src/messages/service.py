@@ -86,6 +86,7 @@ class MessageService:
 
             await uow.commit()
             message = self.__message_dict_to_read_model(message_dict)
+            message.reply = await self.__get_reply(uow, message)
             await self.socket_manager.emit_to_user(user, 'new_messages', [message])
 
             if prompt:
@@ -104,16 +105,24 @@ class MessageService:
         async with uow:
             res = []
             write_message = None
-            logger.info(f"Request to GPT for {user}")
+            logger.info(f"Request to GPT for {user}. Using model {chat.model}")
             try:
                 context_messages = await self.message_repository.get_context(uow.session, chat.uuid, message.created_at,
                                                                              chat.context_size)
+                context_message_ids = {m['uuid'] for m in context_messages}
+                reply_messages = []
+                for r in message.reply:
+                    if r.reply_to not in context_message_ids:
+                        m = await self.get_message(uow, r.reply_to)
+                        reply_messages.append(m)
+
                 prompt = [
+                    *[{'role': m.role, 'content': m.content} for m in reversed(reply_messages)],
                     *[{'role': m['role'], 'content': m['content']} for m in reversed(context_messages)],
                     {'role': message.role, 'content': message.content}
                 ]
                 logger.debug(f"GPT prompt (from {user}): {prompt}")
-                async for el in gpt.async_stream_response(prompt):
+                async for el in gpt.async_stream_response(prompt, model=chat.model):
                     logger.debug(f"Gpt answer (user {user}) part: {repr(el)}")
                     if write_message is None:
                         message_id = await self.add_message(uow, chat, MessageCreate(
@@ -122,7 +131,8 @@ class MessageService:
                             content=el,
                             reply=[
                                 ReplyCreate(reply_to=message.uuid, type='prompt'),
-                                *[ReplyCreate(reply_to=m['uuid'], type='context') for m in context_messages]
+                                *[ReplyCreate(reply_to=m['uuid'], type='context') for m in context_messages],
+                                *[ReplyCreate(reply_to=m.uuid, type='implicit') for m in reply_messages]
                             ]
                         ), user, prompt=False)
 
