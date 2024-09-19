@@ -6,11 +6,11 @@ from pydantic import BaseModel
 
 class ReplyRead(BaseModel):
     uuid: UUID
-    from_uuid: UUID
-    to_uuid: UUID
+    message_uuid: UUID
+    reply_to: UUID
     type: Literal['prompt', 'context', 'explicit', 'implicit']
 
 
 class ReplyCreate(BaseModel):
-    to_uuid: UUID
+    reply_to: UUID
     type: Literal['prompt', 'context', 'explicit', 'implicit']

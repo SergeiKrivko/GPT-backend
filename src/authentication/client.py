@@ -3,11 +3,10 @@ import json
 
 from firebase_admin import auth
 import firebase_admin.credentials
-from firebase_admin.auth import ExpiredIdTokenError, InvalidIdTokenError
+from firebase_admin.auth import InvalidIdTokenError
 
 from src.authentication.exceptions import NotAuthenticatedError
 from src.utils.config import FIREBASE_SA_KEY
-from src.utils.exceptions import AuthenticationError
 
 
 class AuthClient:

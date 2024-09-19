@@ -10,12 +10,14 @@ from src.gpt import gpt
 from src.messages.repository import MessageRepository
 from src.messages.schemas import MessageRead, MessageCreate
 from src.replys.repository import ReplyRepository
+from src.replys.schemas import ReplyCreate, ReplyRead
 from src.sockets.manager import SocketManager
 from src.utils.unitofwork import IUnitOfWork, UnitOfWork
 
 
 class MessageService:
-    def __init__(self, message_repository: MessageRepository, chat_service: ChatService, reply_repository: ReplyRepository,
+    def __init__(self, message_repository: MessageRepository, chat_service: ChatService,
+                 reply_repository: ReplyRepository,
                  socket_manager: SocketManager):
         self.message_repository = message_repository
         self.chat_service = chat_service
@@ -56,9 +58,13 @@ class MessageService:
             message_model.reply = reply_list
             return message_model
 
-    async def __get_reply(self, uow: IUnitOfWork, message: MessageRead):
-        reply_list = await self.reply_repository.get(uow.session, from_uuid=message.uuid)
-        return reply_list
+    async def __get_reply(self, uow: IUnitOfWork, message: MessageRead) -> list[ReplyRead]:
+        reply_list = await self.reply_repository.get_all(uow.session, from_uuid=message.uuid)
+        return [ReplyRead(
+            uuid=r['uuid'],
+            message_uuid=r['from_uuid'],
+            reply_to=r['to_uuid'],
+            type=r['type']) for r in reply_list]
 
     async def add_message(self, uow: IUnitOfWork, chat: ChatRead, model: MessageCreate, user, prompt=False):
         async with uow:
@@ -67,16 +73,17 @@ class MessageService:
             message_dict['model'] = chat.model
             message_dict['temperature'] = chat.temperature
 
+            await self.message_repository.add(uow.session, message_dict)
+
             new_id = message_dict['uuid']
             for item in model.reply:
                 await self.reply_repository.add(uow.session, {
                     'uuid': uuid.uuid4(),
                     'from_uuid': new_id,
-                    'to_uuid': item.to_uuid,
+                    'to_uuid': item.reply_to,
                     'type': item.type,
                 })
 
-            await self.message_repository.add(uow.session, message_dict)
             await uow.commit()
             message = self.__message_dict_to_read_model(message_dict)
             await self.socket_manager.emit_to_user(user, 'new_messages', [message])
@@ -93,39 +100,50 @@ class MessageService:
             await self.socket_manager.emit_to_user(user, 'delete_messages', [message_uuid])
             return message_uuid
 
-    async def run_gpt(self, uow, chat: ChatRead, message: MessageRead, user):
-        res = []
-        write_message = None
-        logger.info(f"Request to GPT for {user}")
-        try:
-            async for el in gpt.async_stream_response([
-                {'role': message.role, 'content': message.content}
-            ]):
-                logger.debug(f"Gpt answer (user {user}) part: {repr(el)}")
-                if write_message is None:
-                    message_id = await self.add_message(uow, chat, MessageCreate(
-                        chat_uuid=chat.uuid,
-                        role='assistant',
-                        content=el,
-                    ), user, prompt=False)
-                    write_message = await self.get_message(uow, message_id)
-                else:
-                    await self.socket_manager.emit_to_user(user, 'message_add_content', {
-                        'uuid': str(write_message.uuid),
-                        'chat': str(chat.uuid),
-                        'content': el,
-                    })
-                res.append(el)
-        except Exception as ex:
-            logger.error(f"{ex.__class__.__name__}: {ex}")
-            await self.socket_manager.emit_to_user(user, 'gpt_error', f"{ex.__class__.__name__}: {ex}")
-        else:
-            await self.socket_manager.emit_to_user(user, 'message_finish', str(write_message.uuid))
-            logger.info(f"GPT finished for {user}: {repr(''.join(res))}")
-        await self.message_repository.edit(uow.session, write_message.uuid, {
-            'content': ''.join(res),
-        })
-        await uow.commit()
+    async def run_gpt(self, uow: IUnitOfWork, chat: ChatRead, message: MessageRead, user):
+        async with uow:
+            res = []
+            write_message = None
+            logger.info(f"Request to GPT for {user}")
+            try:
+                context_messages = await self.message_repository.get_context(uow.session, chat.uuid, message.created_at,
+                                                                             chat.context_size)
+                prompt = [
+                    *[{'role': m['role'], 'content': m['content']} for m in reversed(context_messages)],
+                    {'role': message.role, 'content': message.content}
+                ]
+                logger.debug(f"GPT prompt (from {user}): {prompt}")
+                async for el in gpt.async_stream_response(prompt):
+                    logger.debug(f"Gpt answer (user {user}) part: {repr(el)}")
+                    if write_message is None:
+                        message_id = await self.add_message(uow, chat, MessageCreate(
+                            chat_uuid=chat.uuid,
+                            role='assistant',
+                            content=el,
+                            reply=[
+                                ReplyCreate(reply_to=message.uuid, type='prompt'),
+                                *[ReplyCreate(reply_to=m['uuid'], type='context') for m in context_messages]
+                            ]
+                        ), user, prompt=False)
+
+                        write_message = await self.get_message(uow, message_id)
+                    else:
+                        await self.socket_manager.emit_to_user(user, 'message_add_content', {
+                            'uuid': str(write_message.uuid),
+                            'chat': str(chat.uuid),
+                            'content': el,
+                        })
+                    res.append(el)
+            except Exception as ex:
+                logger.error(f"{ex.__class__.__name__}: {ex}")
+                await self.socket_manager.emit_to_user(user, 'gpt_error', f"{ex.__class__.__name__}: {ex}")
+            else:
+                await self.socket_manager.emit_to_user(user, 'message_finish', str(write_message.uuid))
+                logger.info(f"GPT finished for {user}: {repr(''.join(res))}")
+            await self.message_repository.edit(uow.session, write_message.uuid, {
+                'content': ''.join(res),
+            })
+            await uow.commit()
 
     @staticmethod
     def __message_dict_to_read_model(message_dict: dict) -> MessageRead:
