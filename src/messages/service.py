@@ -150,9 +150,11 @@ class MessageService:
             else:
                 await self.socket_manager.emit_to_user(user, 'message_finish', str(write_message.uuid))
                 logger.info(f"GPT finished for {user}: {repr(''.join(res))}")
-            await self.message_repository.edit(uow.session, write_message.uuid, {
-                'content': ''.join(res),
-            })
+
+            if write_message:
+                await self.message_repository.edit(uow.session, write_message.uuid, {
+                    'content': ''.join(res),
+                })
             await uow.commit()
 
     @staticmethod

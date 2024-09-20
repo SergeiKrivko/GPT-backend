@@ -71,7 +71,7 @@ async def async_stream_response(messages: list[dict[str: str]], model=None, **kw
     res = []
     finished = False
 
-    model = 'gpt-4o-mini'
+    # model = 'gpt-4o-mini'
 
     def func():
         for el in stream_response(messages, model, **kwargs):
