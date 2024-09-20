@@ -16,6 +16,7 @@ class Chat(IModel):
     temperature = Column(Float, nullable=False)
     pinned = Column(Boolean, nullable=False)
     archived = Column(Boolean, nullable=False)
+    color = Column(Integer, nullable=True)
     user = Column(String, nullable=False)
 
     def dict(self):
@@ -30,5 +31,6 @@ class Chat(IModel):
             'temperature': self.temperature,
             'pinned': self.pinned,
             'archived': self.archived,
+            'color': self.color,
             'user': self.user
         }

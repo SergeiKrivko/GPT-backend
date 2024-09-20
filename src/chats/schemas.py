@@ -15,6 +15,7 @@ class ChatRead(BaseModel):
     temperature: float
     pinned: bool
     archived: bool
+    color: int
     user: str
 
 

@@ -148,7 +148,7 @@ class MessageService:
                 logger.error(f"{ex.__class__.__name__}: {ex}")
                 await self.socket_manager.emit_to_user(user, 'gpt_error', f"{ex.__class__.__name__}: {ex}")
             else:
-                await self.socket_manager.emit_to_user(user, 'message_finish', str(write_message.uuid))
+                await self.socket_manager.emit_to_user(user, 'message_finish', write_message)
                 logger.info(f"GPT finished for {user}: {repr(''.join(res))}")
 
             if write_message:

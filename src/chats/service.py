@@ -1,3 +1,4 @@
+import random
 import uuid
 from datetime import datetime
 
@@ -62,12 +63,6 @@ class ChatService:
             await self.socket_manager.emit_to_user(user, 'delete_chats', [str(chat_uuid)])
             return chat_uuid
 
-    # async def __on_new_chat(self, uow: UOWDep, uid: str):
-    #     await self.add_chat(uow, uid)
-    #
-    # async def __on_update_chat(self, uow: UOWDep, uid: str, chat_id=None, chat=None):
-    #     await self.update_chat(uow, chat_id, ChatUpdate(**chat), uid)
-
     @staticmethod
     def chat_dict_to_read_model(chat_dict: dict) -> ChatRead:
         return ChatRead(
@@ -80,6 +75,7 @@ class ChatService:
             temperature=chat_dict['temperature'],
             pinned=chat_dict['pinned'],
             archived=chat_dict['archived'],
+            color=chat_dict['color'],
             user=chat_dict['user'],
         )
 
@@ -95,6 +91,7 @@ class ChatService:
             'temperature': 0.5,
             'pinned': False,
             'archived': False,
+            'color': random.randint(0, 5),
         }
 
     @staticmethod
