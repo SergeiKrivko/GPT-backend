@@ -14,6 +14,7 @@ from src.replys.repository import ReplyRepository
 from src.replys.service import ReplyService
 from src.sockets.manager import SocketManager
 from src.translate.service import TranslateService
+from src.releases.service import ReleasesService
 from src.utils.unitofwork import IUnitOfWork, UnitOfWork
 
 auth_client = AuthClient()
@@ -31,6 +32,8 @@ message_repository = MessageRepository()
 message_service = MessageService(message_repository, chat_service, reply_repository, socket_manager)
 
 translate_service = TranslateService()
+
+releases_service = ReleasesService()
 
 security = HTTPBearer()
 
@@ -51,6 +54,10 @@ async def get_translate_service():
     return translate_service
 
 
+async def get_releases_service():
+    return releases_service
+
+
 async def get_authentication_token(credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)]):
     return credentials.credentials
 
@@ -60,6 +67,7 @@ ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
 MessageServiceDep = Annotated[MessageService, Depends(get_message_service)]
 
 TranslateServiceDep = Annotated[TranslateService, Depends(get_translate_service)]
+ReleasesServiceDep = Annotated[ReleasesService, Depends(get_releases_service)]
 
 UOWDep = Annotated[IUnitOfWork, Depends(UnitOfWork)]
 AuthenticationDep = Annotated[str, Depends(get_authentication_token)]
