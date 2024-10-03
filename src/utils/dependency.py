@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Depends, Form
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from src.authentication.client import AuthClient
+from src.authentication.client import FirebaseClient
 from src.authentication.schemas import UserRead
 from src.authentication.service import AuthenticationService
 from src.chats.repository import ChatRepository
@@ -17,7 +17,7 @@ from src.translate.service import TranslateService
 from src.releases.service import ReleasesService
 from src.utils.unitofwork import IUnitOfWork, UnitOfWork
 
-auth_client = AuthClient()
+auth_client = FirebaseClient()
 authentication_service = AuthenticationService(auth_client)
 
 socket_manager = SocketManager(authentication_service)
@@ -71,6 +71,7 @@ ReleasesServiceDep = Annotated[ReleasesService, Depends(get_releases_service)]
 
 UOWDep = Annotated[IUnitOfWork, Depends(UnitOfWork)]
 AuthenticationDep = Annotated[str, Depends(get_authentication_token)]
+FirebaseDep = Annotated[FirebaseClient, Depends(lambda: auth_client)]
 FormDep = Annotated[str | None, Form()]
 
 

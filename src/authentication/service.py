@@ -1,10 +1,10 @@
-from src.authentication.client import AuthClient
+from src.authentication.client import FirebaseClient
 from src.authentication.schemas import UserRead
 from src.utils.exceptions import exception_handler
 
 
 class AuthenticationService:
-    def __init__(self, auth_client: AuthClient):
+    def __init__(self, auth_client: FirebaseClient):
         self.auth_client = auth_client
 
     @exception_handler

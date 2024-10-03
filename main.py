@@ -11,6 +11,7 @@ from src.messages.router import router as messages_router
 from src.gpt.router import router as gpt_router
 from src.translate.router import router as translate_router
 from src.releases.router import router as releases_router
+from src.logs.router import router as logs_router
 from src.utils.config import VERSION
 from src.sockets.manager import sio
 from src.sockets.router import init as socket_init
@@ -85,6 +86,7 @@ app.include_router(messages_router, prefix='/api/v1')
 app.include_router(gpt_router, prefix='/api/v1')
 app.include_router(translate_router, prefix='/api/v1')
 app.include_router(releases_router, prefix='/api/v1')
+app.include_router(logs_router, prefix='/api/v1')
 
 socket_init()
 
