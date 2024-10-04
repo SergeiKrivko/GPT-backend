@@ -1,16 +1,8 @@
-from datetime import datetime
-from uuid import UUID
+from fastapi import APIRouter, UploadFile
 
-from fastapi import APIRouter
-
-from src.authentication.exceptions import NotAuthenticatedError
-from src.chats.exceptions import ReadChatDenied, ChatNotFoundError, UpdateChatDenied, DeleteChatDenied
-from src.chats.schemas import ChatUpdate
-from src.gpt import gpt
-from src.translate.schemas import TranslateCreate
-from src.utils.dependency import ChatServiceDep, UOWDep, AuthenticatedUserDep, TranslateServiceDep
+from src.translate.schemas import TranslateCreate, ExtractCreate
+from src.utils.dependency import TranslateServiceDep
 from src.utils.exceptions import exception_handler
-from src.utils.logic import equal_uuids
 
 router = APIRouter(prefix='/translate', tags=['Translate'])
 
@@ -23,7 +15,7 @@ async def post_detect_handler(src: TranslateCreate, translate_service: Translate
         'data': {
             'lang': res.result.id,
         },
-        'detail': 'GPT models were selected.'
+        'detail': 'Language detected.'
     }
 
 
@@ -37,5 +29,15 @@ async def post_translate_handler(src: TranslateCreate, dst: str, translate_servi
             'src': res.source_language.id,
             'dst': res.destination_language.id,
         },
-        'detail': 'GPT models were selected.'
+        'detail': 'Text was translated.'
+    }
+
+
+@router.post('/extract')
+@exception_handler
+async def post_extract_handler(src: ExtractCreate, translate_service: TranslateServiceDep):
+    res = await translate_service.extract_text(src.image, src.filetype, src.lang)
+    return {
+        'data': res,
+        'detail': 'Text was extracted.'
     }
