@@ -4,10 +4,12 @@ from inspect import iscoroutinefunction
 from uuid import UUID
 
 import socketio
+from fastapi import HTTPException
 from loguru import logger
 from pydantic import BaseModel
 
 from src.authentication.service import AuthenticationService
+from src.utils.exceptions import AuthenticationError
 
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 
@@ -28,10 +30,14 @@ class SocketManager:
                 return
             user = self.__sids[sid]
             logger.info(f"Socket '{key}' from {sid} (user {user}) received")
-            if iscoroutinefunction(handler):
-                res = await handler(user, *args)
-            else:
-                res = handler(user, *args)
+            try:
+                if iscoroutinefunction(handler):
+                    res = await handler(user, *args)
+                else:
+                    res = handler(user, *args)
+            except Exception as ex:
+                logger.error(f"{ex.__class__.__name__}: {ex}")
+                res = None
             resp = {
                 'data': SocketManager.__data_to_json(res),
                 'time': datetime.now().isoformat(),
@@ -77,7 +83,14 @@ class SocketManager:
             logger.info(f"Socket '{key}' emitted to {sid} (user {uid})")
 
     async def __connect(self, sid, environ, token=''):
-        user = await self.__auth_service.get_authenticated_user(token)
+        try:
+            user = await self.__auth_service.get_authenticated_user(token)
+        except AuthenticationError:
+            logger.error(f"Client {sid} not connected: invalid token")
+            return
+        except HTTPException:
+            logger.error(f"Client {sid} not connected: invalid token")
+            return
         logger.info(f"Client connected: {sid} (user {user.uid})")
         if user.uid not in self.__users:
             self.__users[user.uid] = []
