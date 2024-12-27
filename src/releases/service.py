@@ -10,10 +10,10 @@ from src.releases.schemas import ReleaseRead, ReleaseAssetRead
 
 class ReleasesService:
     def __init__(self):
-        auth = Auth.Token(os.getenv('GITHUB_TOKEN'))
+        # auth = Auth.Token(os.getenv('GITHUB_TOKEN'))
 
         # Public Web GitHub
-        self.__github = Github(auth=auth)
+        self.__github = Github()
         self.__repo = self.__github.get_repo('SergeiKrivko/GPT-chat-cs')
 
     async def get_all(self) -> Iterable[ReleaseRead]:
