@@ -1,12 +1,11 @@
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
+
+from sqlalchemy.orm import DeclarativeMeta
+
 from src.utils.database import Base
 
 
-class DeclarativeABCMeta(ABCMeta, type(Base)):
-    pass
-
-
-class IModel(Base, metaclass=DeclarativeABCMeta):
+class IModel(Base, metaclass=DeclarativeMeta):
     __abstract__ = True
 
     @property
