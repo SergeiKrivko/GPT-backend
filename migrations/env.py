@@ -8,11 +8,12 @@ from sqlalchemy import pool
 
 from alembic import context
 
-sys.path.append(os.path.join(sys.path[1], '../../'))
+sys.path.append(os.path.join(sys.path[1], "../../"))
 
 from src.chats.models import *
 from src.messages.models import *
 from src.replys.models import *
+from src.utils.ratelimit_by_ip_model import RatelimitLog
 from src.utils.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS
 from src.utils.database import metadata, Base
 
@@ -83,9 +84,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

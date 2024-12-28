@@ -39,87 +39,15 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-#      - name: Send Telegram message
-#        uses: appleboy/telegram-action@master
-#        with:
-#          to: ${{ secrets.NACHERT_TELEGRAM_EVENTS_CHAT_ID }}
-#          token: ${{ secrets.NACHERT_TELEGRAM_EVENTS_TOKEN }}
-#          disable_notification: true
-#          format: markdown
-#          message: |
-#            *New push to the Container Registry!*
-#
-#            Author: ${{ github.actor }}
-#            Repository: ${{ github.repository }}
-#            Branch: ${{ github.ref }}
-#            Commit message: ${{ github.event.head_commit.message }}
-#
-#            See changes: https://github.com/${{ github.repository }}/commit/${{github.sha}}
+  deploy:
+    name: Deploy the latest image to the VM
+    runs-on: ubuntu-latest
+    needs: build-and-push
 
-#  deploy-to-dev:
-#    name: Deploy the latest dev image to the dev VM
-#    runs-on: ubuntu-latest
-#    environment: dev
-#    needs: build-and-push
-#    # if: github.ref == 'refs/heads/dev'
-#
-#    steps:
-#      - name: Update docker images on the dev VM via SSH
-#        uses: appleboy/ssh-action@v1.0.3
-#        with:
-#          host: ${{ secrets.SSH_HOST }}
-#          username: ${{ secrets.SSH_USER }}
-#          key: ${{ secrets.SSH_KEY }}
-#          port: ${{ secrets.SSH_PORT }}
-#          script: |
-#            cd GPT-backend
-#            sudo docker compose up --detach --pull always
-#            docker container list --all
-
-#      - name: Send Telegram message
-#        uses: appleboy/telegram-action@master
-#        with:
-#          to: ${{ secrets.NACHERT_TELEGRAM_EVENTS_CHAT_ID }}
-#          token: ${{ secrets.NACHERT_TELEGRAM_EVENTS_TOKEN }}
-#          format: markdown
-#          message: |
-#            *New deployment to dev!*
-#
-#            Author: ${{ github.actor }}
-#            Repository: ${{ github.repository }}
-#            Commit message: ${{ github.event.head_commit.message }}
-#            Deployment: http://api.nachert.art
-#
-#            See changes: https://github.com/${{ github.repository }}/commit/${{github.sha}}
-
-#  database-migration-dev:
-#    name: Upgrade alembic revision on the dev deployment
-#    runs-on: ubuntu-latest
-#    environment: dev
-#    needs: deploy-to-dev
-#    if: github.ref == 'refs/heads/dev'
-#
-#    steps:
-#      - name: Upgrade alembic migration on the dev deployment
-#        uses: appleboy/ssh-action@v1.0.3
-#        with:
-#          host: ${{ secrets.SSH_HOST }}
-#          username: ${{ secrets.SSH_USER }}
-#          key: ${{ secrets.SSH_KEY }}
-#          port: ${{ secrets.SSH_PORT }}
-#          script: |
-#            cd GPT-backend
-#            sudo ./urev
-#
-#      - name: Send Telegram message
-#        uses: appleboy/telegram-action@master
-#        with:
-#          to: ${{ secrets.NACHERT_TELEGRAM_EVENTS_CHAT_ID }}
-#          token: ${{ secrets.NACHERT_TELEGRAM_EVENTS_TOKEN }}
-#          format: markdown
-#          message: |
-#            *New database migration on dev!*
-#
-#            Author: ${{ github.actor }}
-#            Repository: ${{ github.repository }}
-#            Deployment: http://api.nachert.art
+    steps:
+      - name: Trigger Deployment Webhook
+        env:
+          ADMIN_CREDENTIALS: ${{ secrets.DEPLOY_API_CREDENTIALS }}
+        run: |
+          curl -X POST https://deploy-api.nachert.art/api/v1/stacks/gptchat/deployments \
+          -H "Authorization: Basic $ADMIN_CREDENTIALS"

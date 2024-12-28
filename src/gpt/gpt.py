@@ -1,19 +1,16 @@
 import asyncio
+from typing import Optional
 
 import g4f
 
 
-def stream_response(messages: list[dict[str: str]], model=None, **kwargs):
-    if model is None or model == 'default':
+def stream_response(messages: list[dict[str:str]], model=None, **kwargs):
+    if model is None or model == "default":
         model = g4f.models.default
 
     try:
         response = g4f.ChatCompletion.create(
-            model=model,
-            messages=messages,
-            timeout=120,
-            stream=True,
-            **kwargs
+            model=model, messages=messages, timeout=120, stream=True, **kwargs
         )
         for el in response:
             yield el
@@ -21,53 +18,17 @@ def stream_response(messages: list[dict[str: str]], model=None, **kwargs):
         yield simple_response(messages, model, **kwargs)
 
 
-# async def async_stream_response(messages: list[dict[str: str]], model=None, **kwargs):
-#     if model is None or model == 'default':
-#         model = g4f.models.default
-#
-#     try:
-#         response = g4f.ChatCompletion.create_async(
-#             model=model,
-#             messages=messages,
-#             timeout=120,
-#             stream=True,
-#             **kwargs
-#         )
-#         async for el in response:
-#             yield el
-#     except g4f.StreamNotSupportedError:
-#         async for el in async_simple_response(messages, model, **kwargs):
-#             yield el
-
-
-def simple_response(messages: list[dict[str: str]], model=None, **kwargs):
-    if model is None or model == 'default':
+def simple_response(messages: list[dict[str:str]], model=None, **kwargs):
+    if model is None or model == "default":
         model = g4f.models.default
 
     response = g4f.ChatCompletion.create(
-        model=model,
-        messages=messages,
-        timeout=120,
-        **kwargs
+        model=model, messages=messages, timeout=120, **kwargs
     )
     return response
 
 
-# async def async_simple_response(messages: list[dict[str: str]], model=None, **kwargs):
-#     if model is None or model == 'default':
-#         model = g4f.models.default
-#
-#     response = g4f.ChatCompletion.create_async(
-#         model=model,
-#         messages=messages,
-#         timeout=120,
-#         **kwargs
-#     )
-#     async for el in response:
-#         yield el
-
-
-async def async_stream_response(messages: list[dict[str: str]], model=None, **kwargs):
+async def async_stream_response(messages: list[dict[str:str]], model=None, **kwargs):
     res = []
     finished = False
 
@@ -83,13 +44,33 @@ async def async_stream_response(messages: list[dict[str: str]], model=None, **kw
         if res:
             lst = res
             res = []
-            yield ''.join(lst)
+            yield "".join(lst)
     if res:
-        yield ''.join(res)
+        yield "".join(res)
     await task
 
 
 def get_models():
-    yield 'default'
+    yield "default"
     for el in g4f.models._all_models:
         yield el
+
+
+async def async_simple_response(message: str, model: str = "default") -> str:
+    if model == "default":
+        model = None
+
+    return " ".join(
+        [
+            chunk
+            async for chunk in async_stream_response(
+                [
+                    {
+                        "role": "user",
+                        "content": message,
+                    }
+                ],
+                model=model,
+            )
+        ]
+    )
