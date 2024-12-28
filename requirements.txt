@@ -10,7 +10,7 @@ starlette~=0.38.4
 firebase-admin==6.5.0
 python-multipart==0.0.9
 python-socketio[asyncio]==5.11.4
-g4f~=0.3.3.3
+g4f~=0.3.9.7
 curl_cffi
 translatepy~=2.3
 PyGithub~=2.4.0
